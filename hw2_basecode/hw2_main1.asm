@@ -29,7 +29,7 @@ _start:
 	##################
 	# char2digit
 	##################
-	li $a0, '9'
+	li $a0, '@'
 	jal char2digit
 
 	# print return value
@@ -78,8 +78,8 @@ _start:
 	##################
 	# printNbitBinary
 	##################
-	li $a0, -23
-	li $a1, 30
+	li $a0, 2
+	li $a1, 100
 	jal printNbitBinary
 
 	# print return value
