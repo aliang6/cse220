@@ -96,7 +96,7 @@ btof: #a0 = address of input
 	
 	# Input Check
 	li $t0 1  # Counter starts at 1 since first character was already checked in the special cases check
-	li $s1 -1  # Set the position of the decimal to -1 for error checks in conversionbtof	
+	li $s1 -1  # Set the position of the decimal to -1 for error checks in conversionbtof
 	inputCheck:
 		add $t1 $t0 $s0  # Add counter to address
 		lb $t2 0($t1)
@@ -143,13 +143,15 @@ btof: #a0 = address of input
 			j findRightOne
 		
 		rightOneNotFound:
-		beq $s2 -1 zeroCase  # No zeros were found, so branch to zero case
+		beq $s2 -1 inputVerifiedZeroCase  # No zeros were found, so it is zero
 		
 		rightOneFound:
 		move $s2 $t3  # Copy position of rightmost one into $s2
 		# Subtract decimal position from rightmost one position then substract one to calculate exponent in decimal form
-		sub $t0 $s1 $s2   
+		sub $t0 $s1 $s2
+		bltz $t0 skipSubtraction
 		addi $t0 $t0 -1  # Exponent in decimal form
+		skipSubtraction:
 		addi $t0 $t0 127  # Exponent in excess-127 form
 		sll $s7 $s7 8  # Make make space for exponent
 		add $s7 $s7 $t0  # Append exponent
@@ -183,14 +185,15 @@ btof: #a0 = address of input
 		j setReturnbtof
 		
 	nan:
-		lb $t1 4($t0)
+		lb $t1 4($s0)
 		bnez $t1 invalidInputbtof  # Invalid input if fifth character is not null, fourth being new line
-		lb $t1 1($t0)
+		lb $t1 1($s0)
 		bne $t1 97 invalidInputbtof  # Invalid input if second character is not 'a'
-		lb $t1 2($t0)
+		lb $t1 2($s0)
 		bne $t1 78 invalidInputbtof  # Invalid input if third character is not 'N'
 		li $v0 0
-		li $v1 01111111111111111111111111111111
+		lui $v1 0x7FFF
+		addi $v1 $v1 0xFFFF
 		j returnbtof
 		
 	infZero:
@@ -211,11 +214,11 @@ btof: #a0 = address of input
 		
 		posInf:
 			li $v0 0
-			li $v1 01111111100000000000000000000000
+			lui $v1 0x7F80
 			j returnbtof
 		negInf:
 			li $v0 0
-			li $v1 11111111100000000000000000000000
+			lui $v1 0xFF80
 			j returnbtof
 			
 	zeroCase:
@@ -229,10 +232,10 @@ btof: #a0 = address of input
 		jal char2digit  # Call char2digit function
 		move $t1 $v0  # Copy return value to $t1
 		bnez $t1 inputCheck  # Branch to input check if not zero because input cannot be confirmed as invalid yet
+		inputVerifiedZeroCase:
 		lb $t1 0($s0)
 		beq $t1 43 posZero  # If first character is '+', branch to posZero
 		beq $t1 45 negZero  # If first character is '-', branch to negZero
-		j invalidInputbtof
 		
 		posZero:
 			li $v0 0
