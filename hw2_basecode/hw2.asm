@@ -373,8 +373,8 @@ print_binary_product:
     
     # Sign Bit
     srl $s0 $s6 31  
+    li $v0 11  # Print character
 	beqz $s0 positiveSignProduct  # If the sign bit is 0, then it's positive
-	li $v0 11  # Print character
 	li $a0 45  # ASCII for -
 	syscall
 	j printOnePoint
@@ -401,7 +401,21 @@ print_binary_product:
 	syscall
 	li $a0 94  # ASCII for ^
 	syscall
-	
+	# Exponent
+	sll $s0 $s6 1  # Shift left once to remove sign bit
+	srl $s0 $s0 24 # Shift right 24 bits so that the 8 least significant bits are the exponent bits
+	move $a0 $s0
+	li $a1 127  # IEE 754 Single Precision is excess-127
+	jal fromExcessk
+	move $s0 $v1  # Copy the return value
+	beqz $s0 printExponentProduct  # If the value is positive
+	li $v0 11
+	li $a0 43  # ASCII for +
+	syscall
+	printExponentProduct:
+	move $a0 $s0
+	li $v0 1
+	syscall
 	
     
     
@@ -419,4 +433,4 @@ print_binary_product:
 .data
 .align 2  # Align next items to word boundary
 
-	# newline: .asciiz "\n"
+	newline: .asciiz "\n"
