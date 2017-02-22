@@ -371,6 +371,18 @@ print_binary_product:
     move $s6 $a0  # Copy value of argument into $s6
     
     
+    # Special Cases Check
+	beqz $s6 specialValueProduct  # +0
+	lui $t0 0x8000
+	beq $s6 $t0 specialValueProduct  # -0
+	lui $t0 0x7F80
+	beq $s6 $t0 specialValueProduct  # +Infinity
+	lui $t0 0xFF80
+	beq $s6 $t0 specialValueProduct  # -Infinity
+	lui $t0 0x7FFF
+	addi $t0 $t0 0xFFFF
+	beq $s6 $t0 specialValueProduct  # NaN
+    
     # Sign Bit
     srl $s0 $s6 31  
     li $v0 11  # Print character
@@ -417,8 +429,13 @@ print_binary_product:
 	li $v0 1
 	syscall
 	
+	li $v0 1  # Printable in Binary Form
+	j returnProduct
     
+    specialValueProduct:
+    li $v0 0 # Not printable in Binary Form
     
+    returnProduct:
     lw $ra 0($sp)  # Load return address
     lw $s0 4($sp)  # Save s registers that I used
     lw $s6 8($sp) 
