@@ -82,23 +82,26 @@ printNbitBinary:  # $a0 = value; $a1 = m
 
 btof: #a0 = address of input
     # ASCII: 43 = +; 45 = -; 46 = .; 73 = I; n = 110; f = 102; N = 78; a = 97; Upper bound: 110; Lower Bound: 43
-    addi $sp $sp -4
+    addi $sp $sp -16
     sw $ra 0($sp)  # Save return address
-    move $s0 $a0  # Copy input address to $t0
+    sw $s1 4($sp)  # Save the s registers that I used
+    sw $s2 8($sp)
+    sw $s7 12($sp)
+    move $t9 $a0  # Copy input address to $t0
    	
 	# Special Cases Check
-	lb $t1 0($s0)  # Load first byte of string to $t1
+	lb $t1 0($t9)  # Load first byte of string to $t1
 	blt $t1 43 invalidInputbtof	 # Check if less than lower bound
 	bgt $t1 110 invalidInputbtof  # Check if above upper bound
 	beq $t1 78 nan  # Branch to NaN check
-	lb $t1 5($s0) # Load sixth byte of string to $t1
+	lb $t1 5($t9) # Load sixth byte of string to $t1
 	beq $t1 0 infZero  # Branch to Inf or Zero check if sixth byte is null
 	
 	# Input Check
 	li $t0 1  # Counter starts at 1 since first character was already checked in the special cases check
 	li $s1 -1  # Set the position of the decimal to -1 for error checks in conversionbtof
 	inputCheck:
-		add $t1 $t0 $s0  # Add counter to address
+		add $t1 $t0 $t9  # Add counter to address
 		lb $t2 0($t1)
 		beq $t2 10 conversionbtof  # Branch to conversion if inputs are verified i.e. if new line ASCII is reached
 		beq $t2 47 invalidInputbtof  # Invalid input if byte is '/'
@@ -114,7 +117,7 @@ btof: #a0 = address of input
 		# Sign Conversion
 		beq $s1 -1 invalidInputbtof  # If there exists no decimal in the input, it's invalid
 		li $t0 0  # Create counter for conversions
-		lb $t1 0($s0)  # Load the first character
+		lb $t1 0($t9)  # Load the first character
 		beq $t1 43 posbtof
 		beq $t1 45 negbtof
 		addi $t0 $t0 -1 # If the first character is not '+' or '-' the counter needs to be decremented to account for the offset
@@ -128,12 +131,12 @@ btof: #a0 = address of input
 		# Integer Conversion
 		intConversion:
 		
-		# $s0 holds the position of the first digit
+		# $t9 holds the position of the first digit
 		# Step 1: Finding the rightmost 1
 		li $s2 -1  # $s2 will hold the position of the rightmost 1
 		li $t3 0  # Counter for address
 		findRightOne:
-			add $t1 $t3 $s0  # Add counter to address
+			add $t1 $t3 $t9  # Add counter to address
 			lb $a0 0($t1)  # Load byte
 			beq $a0 10 rightOneNotFound  # No zeroes if byte is equal to new line i.e. ASCII 10
 			jal char2digit
@@ -156,14 +159,14 @@ btof: #a0 = address of input
 		sll $s7 $s7 8  # Make make space for exponent
 		add $s7 $s7 $t0  # Append exponent
 		
-		# At this point, the floating point stored in $s6 should have the sign bit and the exponent in excess-127
+		# At this point, the floating point stored in $s7 should have the sign bit and the exponent in excess-127
 		li $t0 0  # Counter for mantissa limit
 		move $t1 $s2  # Position counter
 		addi $t1 $t1 1  # Position is now one after rightmost one
 		mantissa:
 			beq $t1 $s1 decimalSkip  # If the current position is equal to decimal position, skip one loop
 			bge $t0 23 inputMantissaAdded  # If the mantissa limit has been reached
-			add $t2 $t1 $s0  # Add position counter to address
+			add $t2 $t1 $t9  # Add position counter to address
 			lb $a0 0($t2)  # Load byte
 			beq $a0 10 inputMantissaAdded  # If the byte is a new line
 			jal char2digit  # Convert byte to digit
@@ -185,11 +188,11 @@ btof: #a0 = address of input
 		j setReturnbtof
 		
 	nan:
-		lb $t1 4($s0)
+		lb $t1 4($t9)
 		bnez $t1 invalidInputbtof  # Invalid input if fifth character is not null, fourth being new line
-		lb $t1 1($s0)
+		lb $t1 1($t9)
 		bne $t1 97 invalidInputbtof  # Invalid input if second character is not 'a'
-		lb $t1 2($s0)
+		lb $t1 2($t9)
 		bne $t1 78 invalidInputbtof  # Invalid input if third character is not 'N'
 		li $v0 0
 		lui $v1 0x7FFF
@@ -197,17 +200,17 @@ btof: #a0 = address of input
 		j returnbtof
 		
 	infZero:
-		lb $t1 2($s0)  # Load the third byte of the string
+		lb $t1 2($t9)  # Load the third byte of the string
 		beq $t1 46 zeroCase  # Branch to zero case if third byte is '.'
 		beq $t1 110 inf  # Branch to inf if third byte is 'n'
 		j inputCheck
 	
 	inf:
-		lb $t1 1($s0)
+		lb $t1 1($t9)
 		bne $t1 73 invalidInputbtof  # Invalid input if third character is not 'I'
-		lb $t1 3($s0)
+		lb $t1 3($t9)
 		bne $t1 102 invalidInputbtof  # Invalid input if fourth character is not 'f'
-		lb $t1 0($s0) 
+		lb $t1 0($t9) 
 		beq $t1 43 posInf  # If first character is '+', branch to posInf
 		beq $t1 45 negInf  # If first character is '-', branch to negInf
 		j invalidInputbtof # Invalid input if the first character isn't '+' or '-'
@@ -222,18 +225,18 @@ btof: #a0 = address of input
 			j returnbtof
 			
 	zeroCase:
-		lb $t1 1($s0)  # Load second character into $t1
+		lb $t1 1($t9)  # Load second character into $t1
 		move $a0 $t1  # Load argument
 		jal char2digit  # Call char2digit function
 		move $t1 $v0  # Copy return value to $t1
 		bnez $t1 inputCheck  # Branch to input check if not zero because input cannot be confirmed as invalid yet
-		lb $t1 3($s0)  # Load third character into $t1
+		lb $t1 3($t9)  # Load third character into $t1
 		move $a0 $t1  # Load argument
 		jal char2digit  # Call char2digit function
 		move $t1 $v0  # Copy return value to $t1
 		bnez $t1 inputCheck  # Branch to input check if not zero because input cannot be confirmed as invalid yet
 		inputVerifiedZeroCase:
-		lb $t1 0($s0)
+		lb $t1 0($t9)
 		beq $t1 43 posZero  # If first character is '+', branch to posZero
 		beq $t1 45 negZero  # If first character is '-', branch to negZero
 		
@@ -260,15 +263,63 @@ btof: #a0 = address of input
 	
 	returnbtof:
 	lw $ra 0($sp)
-	addi $sp $sp 4
+	lw $s1 4($sp)  # Load the s registers that I used
+    lw $s2 8($sp)
+    lw $s7 12($sp)
+	addi $sp $sp 16
     jr $ra
 
-print_parts:
-    #Define your code here
-	############################################
-	# DELETE THIS CODE. Only here to allow main program to run without fully implementing the function
-	li $v0, -200
-	############################################
+
+
+
+
+
+print_parts: #a0 is the 32 bit IEEE 754 value
+    addi $sp $sp -4
+    sw $ra 0($sp)  # Save return address
+    move $t9 $a0  # Copy value of argument into $t9
+    
+    # Special Cases Check (Same as btof function)
+	sll $t0 $t9 1  # Removing the sign bit
+	beqz $t0 zeroPart  # Branch to zero if value without the sign is all zero
+	
+	nanPart:
+	
+	
+	infPart:
+
+	
+	
+	zeroPart:
+	
+		beqz $t9 posZeroPart  $# If $t9 is equal to zero, then it's positive zero
+		# Else negative zero
+		srl $a0 $t9 31  # Sign bit
+		li $a1 1  # 1 bit
+		jal printNbitBinary  # Print the sign bit
+		li $v0, 11  # Print characters
+		li $a0, 32  # ASCII for whitespace
+		syscall
+		li $a0 45  # ASCII for -
+		syscall
+		li $v0 0  # Special value
+		j returnParts
+	
+		posZeroPart:
+		srl $a0 $t9 31  # Sign bit
+		li $a1 1  # 1 bit
+		jal printNbitBinary  # Print the sign bit
+		li $v0, 11  # Print characters
+		li $a0, 32  # ASCII for whitespace
+		syscall
+		li $a0 43  # ASCII for +
+		syscall
+		li $v0 0  # Special value
+		j returnParts
+	
+	returnParts:
+    lw $ra 0($sp)  # Load return address
+    addi $sp $sp 4
     jr $ra
 
 print_binary_product:
@@ -287,5 +338,5 @@ print_binary_product:
 .data
 .align 2  # Align next items to word boundary
 
-#place all data declarations here
-
+plus: .asciiz "+\n"
+minus: .asciiz "-\n"
