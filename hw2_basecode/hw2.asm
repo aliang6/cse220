@@ -57,7 +57,7 @@ printNbitBinary:  # $a0 = value; $a1 = m
     blt $a1 1 returnNBit  # Error test
 	li $t0 32
 	sub $t0 $t0 $a1  # 32 - m
-    sllv $t0 $a0 $t0  # Shift value left 32 - m bits and put it in $t1 register
+    sllv $t0 $a0 $t0  # Shift value left 32 - m bits and put it in $t0 register
     li $v0 1
     whileNBit:
     	ble $a1 0 printSuccessful  # If m is less than or equal to 0, escape loop
@@ -271,63 +271,144 @@ btof: #a0 = address of input
 
 
 
-
-
-
 print_parts: #a0 is the 32 bit IEEE 754 value
-    addi $sp $sp -4
+    addi $sp $sp -12
     sw $ra 0($sp)  # Save return address
-    move $t9 $a0  # Copy value of argument into $t9
+    sw $s0 4($sp)  # Save s registers that I used
+    sw $s6 8($sp) 
+    move $s6 $a0  # Copy value of argument into $s6
     
-    # Special Cases Check (Same as btof function)
-	sll $t0 $t9 1  # Removing the sign bit
-	beqz $t0 zeroPart  # Branch to zero if value without the sign is all zero
-	
-	nanPart:
-	
-	
-	infPart:
-
-	
-	
-	zeroPart:
-	
-		beqz $t9 posZeroPart  $# If $t9 is equal to zero, then it's positive zero
-		# Else negative zero
-		srl $a0 $t9 31  # Sign bit
+    # Sign bit
+		srl $s0 $s6 31  
+		move $a0 $s0
 		li $a1 1  # 1 bit
 		jal printNbitBinary  # Print the sign bit
-		li $v0, 11  # Print characters
-		li $a0, 32  # ASCII for whitespace
+		li $v0 11  # Print characters
+		li $a0 32  # ASCII for whitespace
 		syscall
+		beqz $s0 positiveSign  # If the sign bit is 0, then it's positive
 		li $a0 45  # ASCII for -
 		syscall
-		li $v0 0  # Special value
-		j returnParts
-	
-		posZeroPart:
-		srl $a0 $t9 31  # Sign bit
-		li $a1 1  # 1 bit
-		jal printNbitBinary  # Print the sign bit
-		li $v0, 11  # Print characters
-		li $a0, 32  # ASCII for whitespace
-		syscall
+		j printSign
+		positiveSign:
 		li $a0 43  # ASCII for +
 		syscall
+		printSign:
+		li $v0 4  # Print string
+		la $a0 newline
+		syscall
+		
+		# Exponent
+		sll $s0 $s6 1  # Shift left once to remove sign bit
+		srl $s0 $s0 24 # Shift right 24 bits so that the 8 least significant bits are the exponent bits
+		move $a0 $s0
+		li $a1 8 # Exponent bits
+		jal printNbitBinary
+		li $v0 11  # Print characters
+		li $a0 32  # ASCII for whitespace
+		syscall
+		li $v0 1  # Print integers
+		move $a0 $s0
+		syscall
+		li $v0 4  # Print string
+		la $a0 newline
+		syscall
+		
+		# Mantissa
+		move $a0 $s6
+		li $a1 23
+		jal printNbitBinary
+		li $v0 11  # Print characters
+		li $a0 32  # ASCII for whitespace
+		syscall
+		sll $t0 $s6 9  # Remove sign bit and exponent
+		srl $a0 $t0 9  # Value is just mantissa; loaded into $a0
+		li $v0 1
+		syscall
+		j returnParts
+    
+	
+	# Special Cases Check
+	beqz $s6 specialValue  # +0
+	lui $t0 0x8000
+	beq $s6 $t0 specialValue  # -0
+	lui $t0 0x7F80
+	beq $s6 $t0 specialValue  # +Infinity
+	lui $t0 0xFF80
+	beq $s6 $t0 specialValue  # -Infinity
+	lui $t0 0x7FFF
+	addi $t0 $t0 0xFFFF
+	beq $s6 $t0 specialValue  # NaN
+	
+	# Normal Numbers
+	srl $t0 $s6 31
+	li $v0 1
+	beqz $t0 posReturn
+	li $v0 -1
+	posReturn:
+	j returnParts
+	
+	# Special Value Return
+	specialValue:
 		li $v0 0  # Special value
 		j returnParts
 	
+	# Return 
 	returnParts:
     lw $ra 0($sp)  # Load return address
-    addi $sp $sp 4
+    lw $s0 4($sp)  # Save s registers that I used
+    lw $s6 8($sp) 
+    addi $sp $sp 12
     jr $ra
 
+
+
 print_binary_product:
-    #Define your code here
-	############################################
-	# DELETE THIS CODE. Only here to allow main program to run without fully implementing the function
-	li $v0, -200
-	############################################
+	addi $sp $sp -12
+    sw $ra 0($sp)  # Save return address
+    sw $s0 4($sp)  # Save s registers that I used
+    sw $s6 8($sp) 
+    move $s6 $a0  # Copy value of argument into $s6
+    
+    
+    # Sign Bit
+    srl $s0 $s6 31  
+	beqz $s0 positiveSignProduct  # If the sign bit is 0, then it's positive
+	li $v0 11  # Print character
+	li $a0 45  # ASCII for -
+	syscall
+	j printOnePoint
+	positiveSignProduct:
+	li $a0 43  # ASCII for +
+	syscall
+	printOnePoint:
+	li $a0 49  # ASCII for 1
+	syscall
+	li $a0 46  # ACII for .
+	syscall
+	# Mantissa
+	move $a0 $s6
+	li $a1 23 
+	jal printNbitBinary  # Print mantissa
+	li $v0 11  # Print characters
+	li $a0 32  # ASCII for whitespace
+	syscall
+	li $a0 120  # ASCII for x	
+	syscall
+	li $a0 32  # ASCII for whitespace
+	syscall
+	li $a0 50  # ASCII for 2
+	syscall
+	li $a0 94  # ASCII for ^
+	syscall
+	
+	
+    
+    
+    lw $ra 0($sp)  # Load return address
+    lw $s0 4($sp)  # Save s registers that I used
+    lw $s6 8($sp) 
+    addi $sp $sp 12
     jr $ra
 
 
@@ -338,5 +419,4 @@ print_binary_product:
 .data
 .align 2  # Align next items to word boundary
 
-plus: .asciiz "+\n"
-minus: .asciiz "-\n"
+	# newline: .asciiz "\n"

@@ -57,8 +57,8 @@ _start:
 	##################
 	# fromExcessk
 	##################
-	li $a0, 23
-	li $a1, 127
+	li $a0, 2
+	li $a1, 0
 	jal fromExcessk
 
 	# print return value
@@ -78,8 +78,8 @@ _start:
 	##################
 	# printNbitBinary
 	##################
-	li $a0, 2
-	li $a1, 100
+	li $a0, 8
+	li $a1, 3
 	jal printNbitBinary
 
 	# print return value
