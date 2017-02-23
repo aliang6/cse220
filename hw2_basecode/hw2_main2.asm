@@ -73,7 +73,7 @@ Next:
 	lw $a0, 0($sp)
 	jal print_binary_product
 
-	li $t1, -1
+	li $t1, 1
 	beq $v0, $t1 exit
 	la $a0, print_special
 	li $v0, PRINT_STRING
