@@ -129,7 +129,7 @@ base10: # Convert number from base 10 to base toBase
 		mfhi $t3	# Move remainder into $t3
 		mflo $t4	# Move quotient into $t4
 		ble $t3 9 convertNumber	# If the remainder is less than or equal to 9, branch to convertNumber
-		addi $t3 $t3 0x3	# Convert remainder > 10 to ASCII
+		addi $t3 $t3 0x37	# Convert remainder > 10 to ASCII
 		j store
 		convertNumber:
 			addi $t3 $t3 0x30	# Convert remainder <= 9 to ASCII

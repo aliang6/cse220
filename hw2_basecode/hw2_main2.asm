@@ -4,7 +4,6 @@
 
 .data
 
-pi: .float 3.1415926535897924
 input_buffer: .space 50
 prompt: .asciiz "Enter a string of binary digits or an IEEE special value: "
 print_error: .asciiz "Error in btof function"
