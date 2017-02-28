@@ -98,8 +98,81 @@ countOccurrences:  # $a0 is the string, $a1 is the character array
     returnCountOccurance:
     jr $ra
 
-replaceAllSubstr:
-    # Define your code here
+replaceAllSubstr: # $a0 is address of destination string (must be null terminated, $a1 is the number of bytes in the
+				  # destination array, $a2 is the input string, $a3 are the search characters, argument 4 is in the
+				  # stack and is the string to replace the characters with.
+    lw $t0 0($sp)  # Load returnStr argument to $t0
+    sw $ra 0($sp)  # Store return address in stack
+    addi $sp $sp -20  # Make space in stack to store values $s0 - $s5
+    sw $s0 4($sp)
+    sw $s1 8($sp)
+    sw $s2 12($sp)
+    sw $s3 16($sp)
+    sw $s4 20($sp)
+    move $s0 $a0  # Destination address
+    move $s1 $a1  # Destination array byte length
+    move $s2 $a2  # Input string
+    move $s3 $a3  # Search character array
+    move $s4 $t0  # Replacement String
+    
+    # Check if input string or character array is null
+    lb $t0 0($s2)
+    beqz $t0 errorReplaceAllSubstr
+    lb $t0 0($s3)
+    beqz $t0 errorReplaceAllSubstr
+    
+    # Find the total occurances of the search characters
+    move $a0 $s2  # Copy input string into $a0
+    move $a1 $s3  # Copy search characters into $a1
+    jal countOccurrences
+    move $v1 $v0
+    
+    beqz $v1 returnReplaceAllSubstr  # If there are no occurances, return the function
+    
+    # Find length of the input string
+    li $t0 0  # Counter for finding string length
+    findStringLength:
+    	add $t1 $s2 $t0  # Add counter to address
+    	lb $t1 0($t1)
+    	beqz $t1 stringLengthCalculated  # Null terminator found
+    	addi $t0 $t0 1
+    	j findStringLength
+    
+    stringLengthCalculated:
+    #Find length of the replacement string
+    li $t1 0  # Counter for finding length of the replacement string
+    findReplacementStringLength:
+    	add $t2 $s3 $t0  # Add counter to address
+    	lb $t2 0($t2)
+    	beqz $t2 replacementStringLengthCalculated  # Null terminator found
+    	addi $t1 $t1 1  # Increment counter
+    	j findReplacementStringLength
+    	
+    replacementStringLengthCalculated:
+    addi $t1 $t1 -1  # Substract one from the length of the search character array
+    mult $t1 $v1  # Multiple the occurances by the length of the replacement string - 1
+    mflo $t2
+    add $t2 $t2 $t0  # Total length of the modified string
+    addi $t2 $t2 1  # Total length of the modified string including null terminator
+    bgt $t2 $s1 errorReplaceAllSubstr  # Error if the modified string length is longer than dstLen
+    
+    
+    
+    
+    
+    
+    errorReplaceAllSubstr:
+    li $v1 -1 
+    
+    returnReplaceAllSubstr:
+    move $v0 $s0  # Move starting addess of dst into return
+    # Restore original values for $s0 - $s5
+    lw $s0 4($sp)
+    lw $s1 8($sp)
+    lw $s2 12($sp)
+    lw $s3 16($sp)
+    lw $s4 20($sp)
+   	addi $sp $sp 20
     ###########################################
     # DELETE THIS CODE. Only here to allow main program to run without fully implementing the function
     move $v0, $a3
