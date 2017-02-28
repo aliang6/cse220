@@ -4,18 +4,18 @@ newline:  .asciiz "\n"
 ##################################################################
 # Arguments for test cases. You should change these to create your own tests.
 indexOf_msg: .asciiz "##### Testing indexOf #####"
-indexOf_str: .asciiz "giant giant"
-indexOf_ch: .asciiz "g"
-indexOf_startIndex: .word 3
+indexOf_str: .asciiz ""
+indexOf_ch: .asciiz "c"
+indexOf_startIndex: .word 10
 
 replaceAllChar_msg: .asciiz "\n##### Testing replaceAllChar #####"
-replaceAllChar_str: .asciiz "Stony Brook"
-replaceAllChar_pattern: .asciiz "oBhy"
-replaceAllChar_replacement: .ascii "q"
+replaceAllChar_str: .asciiz "   "
+replaceAllChar_pattern: .asciiz "8 0"
+replaceAllChar_replacement: .ascii "Z"
 
 countOccurrences_msg: .asciiz "\n##### Testing countOccurrences #####"
-countOccurrences_str: .asciiz "Let's Go Seawolves!"
-countOccurrences_searchChars: .asciiz "qsgo!"
+countOccurrences_str: .asciiz "New York City"
+countOccurrences_searchChars: .asciiz ""
 
 replaceAllSubstr_msg: .asciiz "\n##### Testing replaceAllSubstr #####"
 replaceAllSubstr_dst: .ascii "hqyTGng72ABHy7@1ncf"

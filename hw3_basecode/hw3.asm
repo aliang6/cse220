@@ -10,8 +10,20 @@
 ##############################
 
 indexOf:  # $a0 is the string, $a1 is the char to find, $a2 is the index to start at
+	li $v0 -1  # Default immediate
+	bltz $a2 returnIndexOf  # If index is less than zero
+	# Find null terminator
+	li $t9 0  # Counter
+	findNullIndex:
+	add $t3 $a0 $t9  # Add counter to address
+    lb $t4 0($t3)
+    beqz $t4 nullIndexFound
+    addi $t9 $t9 1
+	j findNullIndex
 
-    li $v0 -1  # Default immediate
+	nullIndexFound:
+    bge $a2 $t9 returnIndexOf  # Check if index is greater than the string length
+    
     lookForChar:
     add $t3 $a0 $a2  # Add counter to address
     lb $t4 0($t3)
@@ -28,12 +40,14 @@ indexOf:  # $a0 is the string, $a1 is the char to find, $a2 is the index to star
 
 replaceAllChar:  # $a0 is the string to be modified, $a1 is the pattern, $a2 is the replacement
 	move $v0 $a0  # Return value is the starting address of the string
-	# Checking if pattern array is null
+	# Checking if pattern array and string are null
 	lb $t0 0($a1)
 	li $v1 -1
 	beqz $t0 returnReplaceAllChar
+	lb $t0 0($a0)
+	beqz $t0 returnReplaceAllChar
 	
-	# Pattern array is not null
+	# Pattern array and string are not null
 	li $t0 0  # Counter for string address
 	li $v1 0  # Amount of replacements
 	
