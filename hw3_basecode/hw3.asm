@@ -28,18 +28,60 @@ indexOf:  # $a0 is the string, $a1 is the char to find, $a2 is the index to star
 
 replaceAllChar:  # $a0 is the string to be modified, $a1 is the pattern, $a2 is the replacement
 	move $v0 $a0  # Return value is the starting address of the string
-	li $t0 0  # Counter for amount of replacements
+	# Checking if pattern array is null
+	lb $t0 0($a1)
+	li $v1 -1
+	beqz $t0 returnReplaceAllChar
 	
+	# Pattern array is not null
+	li $t0 0  # Counter for string address
+	li $v1 0  # Amount of replacements
+	
+	lookForReplaceableChar:
+	add $t1 $a0 $t0  # Add counter to address
+	lb $t2 0($t1)
+	beqz $t2 returnReplaceAllChar  # If the null terminator is reached, return values
+	
+	li $t3 -1  # Counter for pattern address
+	checkCharInPattern:
+		addi $t3 $t3 1  # Increment Counter
+		add $t4 $a1 $t3   # Add counter for pattern address to pattern array
+		lb $t4 0($t4)
+		beqz $t4 replaceableCharNotFound  # If the pattern reaches the null terminator, the character isn't found
+		bne $t2 $t4 checkCharInPattern  # If the character isn't equal to current char,
+		sb $a2, 0($t1)  # Replace character at the current address
+		addi $v1 $v1 1  # Increment replacement counter
+		
+	replaceableCharNotFound:
+	addi $t0 $t0 1  # Increment counter
+	j lookForReplaceableChar
     
-    
+    returnReplaceAllChar:
     jr $ra
 
-countOccurrences:
-    # Define your code here
-    ###########################################
-    # DELETE THIS CODE. Only here to allow main program to run without fully implementing the function
-    li $v0, -200
-    ##########################################
+countOccurrences:  # $a0 is the string, $a1 is the character array
+    li $t0 0  # Counter for string address
+	li $v0 0  # Amount of occurances
+	
+	lookForCharOccurance:
+	add $t1 $a0 $t0  # Add counter to address
+	lb $t2 0($t1)
+	beqz $t2 returnCountOccurance  # If the null terminator is reached, return values
+	
+	li $t3 -1  # Counter for pattern address
+	checkPatternOccurance:
+		addi $t3 $t3 1  # Increment Counter
+		add $t4 $a1 $t3   # Add counter for pattern address to pattern array
+		lb $t4 0($t4)
+		beqz $t4 noOccuranceOfChar  # If the pattern reaches the null terminator, the character isn't found
+		bne $t2 $t4 checkPatternOccurance  # If the character isn't equal to current char,
+		addi $v0 $v0 1  # Increment occurance counter
+		
+	noOccuranceOfChar:
+	addi $t0 $t0 1  # Increment counter
+	j lookForCharOccurance
+    
+    returnCountOccurance:
     jr $ra
 
 replaceAllSubstr:
