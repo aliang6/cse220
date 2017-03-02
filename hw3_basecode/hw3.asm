@@ -102,13 +102,13 @@ replaceAllSubstr: # $a0 is address of destination string (must be null terminate
 				  # destination array, $a2 is the input string, $a3 are the search characters, argument 4 is in the
 				  # stack and is the string to replace the characters with.
     lw $t0 0($sp)  # Load returnStr argument to $t0
-    sw $ra 0($sp)  # Store return address in stack
-    addi $sp $sp -20  # Make space in stack to store values $s0 - $s5
-    sw $s0 4($sp)
-    sw $s1 8($sp)
-    sw $s2 12($sp)
-    sw $s3 16($sp)
-    sw $s4 20($sp)
+    addi $sp $sp -24  # Make space in stack to store values $s0 - $s5
+    sw $ra 4($sp)  # Store return address in stack
+    sw $s0 8($sp)
+    sw $s1 12($sp)
+    sw $s2 16($sp)
+    sw $s3 20($sp)
+    sw $s4 24($sp)
     move $s0 $a0  # Destination address
     move $s1 $a1  # Destination array byte length
     move $s2 $a2  # Input string
@@ -142,7 +142,7 @@ replaceAllSubstr: # $a0 is address of destination string (must be null terminate
     #Find length of the replacement string
     li $t1 0  # Counter for finding length of the replacement string
     findReplacementStringLength:
-    	add $t2 $s3 $t0  # Add counter to address
+    	add $t2 $s4 $t1  # Add counter to address
     	lb $t2 0($t2)
     	beqz $t2 replacementStringLengthCalculated  # Null terminator found
     	addi $t1 $t1 1  # Increment counter
@@ -156,28 +156,66 @@ replaceAllSubstr: # $a0 is address of destination string (must be null terminate
     addi $t2 $t2 1  # Total length of the modified string including null terminator
     bgt $t2 $s1 errorReplaceAllSubstr  # Error if the modified string length is longer than dstLen
     
+    # Error checks completed=========================================================================
     
-    
-    
-    
-    
+   	# Loop through string, looking for a occurances of the chars in #s3
+   	li $t0 0  # Counter that goes through the input string
+   	li $t1 0  # Counter that goes through the dst string
+   	li $t9 0  # Counter that increments when a replacement is performed
+   	
+   	# Check if the $t0th byte of the input string is equal to one of the replacement strings
+   	iterateThroughInputString:
+   		add $t2 $s2 $t0  # Add counter to input string
+   		lb $t2 0($t2)  #  Load the $t0th byte of the input string
+   		beqz $t2 inputStringIterationComplete  # Null terminator reached
+   		li $t3 0  # Counter for searchChar array
+   		checkIfByteMatchesSearch:
+   			add $t4 $s3 $t3  # Add counter to searchArray address
+   			lb $t4 0($t4)
+   			beqz $t4 searchCharNotFound  # Null terminator reached
+   			beq $t2 $t4 searchCharFound  # Input character matches a search character
+   			addi $t3 $t3 1  # Increment searchChar counter
+   		j checkIfByteMatchesSearch
+   		
+   	searchCharFound:  
+   	addi $t9 $t9 1  # Increment replacement counter
+   	li $t3 0  # Counter for the replacement string
+   	addi $t0 $t0 1  # Increment input string counter
+   	replaceCharIteration: # Loop through the replacement string and replace the original character
+   		add $t4 $s4 $t3  # Add counter to the replacement string
+   		lb $t4 0($t4)
+   		beqz $t4 iterateThroughInputString  # Null terminator reached
+   		add $t5 $s0 $t1  # Add counter to the dst address
+   		sb $t4 0($t5)  # Store the byte of the replacement string into dst
+   		addi $t3 $t3 1  # Increment replacement string counter
+   		addi $t1 $t1 1 # Increment dst address counter
+   		j replaceCharIteration
+   		
+   	searchCharNotFound:
+   		add $t3 $s0 $t1  # Add the counter to the dst address
+   		sb $t2 0($t3)  # Store the same byte into the dst address
+   		addi $t0 $t0 1  # Increment input string counter
+   		addi $t1 $t1 1 # Increment dst address counter
+   		j iterateThroughInputString
+   	
+   	
     errorReplaceAllSubstr:
     li $v1 -1 
+    j returnReplaceAllSubstr
+    
+    inputStringIterationComplete:
+    move $v1 $t9  # Number of replacements
     
     returnReplaceAllSubstr:
     move $v0 $s0  # Move starting addess of dst into return
     # Restore original values for $s0 - $s5
-    lw $s0 4($sp)
-    lw $s1 8($sp)
-    lw $s2 12($sp)
-    lw $s3 16($sp)
-    lw $s4 20($sp)
-   	addi $sp $sp 20
-    ###########################################
-    # DELETE THIS CODE. Only here to allow main program to run without fully implementing the function
-    move $v0, $a3
-    li $v1, -200
-    ##########################################
+    lw $ra 4($sp)
+    lw $s0 8($sp)
+    lw $s1 12($sp)
+    lw $s2 16($sp)
+    lw $s3 20($sp)
+    lw $s4 24($sp)
+   	addi $sp $sp 24
     jr $ra
 
 split:
