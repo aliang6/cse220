@@ -18,18 +18,18 @@ countOccurrences_str: .asciiz "New York City"
 countOccurrences_searchChars: .asciiz ""
 
 replaceAllSubstr_msg: .asciiz "\n##### Testing replaceAllSubstr #####"
-replaceAllSubstr_dst: .ascii "hqyTGng72ABHy7@1ncf"
-replaceAllSubstr_dstLen: .word 19
-replaceAllSubstr_str: .asciiz "Seawolves!"
-replaceAllSubstr_findStr: .asciiz "oTse"
-replaceAllSubstr_replaceStr: .asciiz "XY"
+replaceAllSubstr_dst: .ascii "??!?@***Hwdkfhjwe"
+replaceAllSubstr_dstLen: .word 17
+replaceAllSubstr_str: .asciiz "MIP is Awesome!"
+replaceAllSubstr_findStr: .asciiz ""
+replaceAllSubstr_replaceStr: .asciiz "A"
 
 split_msg: .asciiz "\n##### Testing split #####"
 .align 2
 split_dst: .space 40
 split_dstLen: .word 10
-split_str: .asciiz ""
-split_delimiter: .ascii ""
+split_str: .asciiz "da"
+split_delimiter: .ascii "a"
 
 
 ##################################################################

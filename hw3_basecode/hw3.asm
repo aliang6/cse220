@@ -102,7 +102,7 @@ replaceAllSubstr: # $a0 is address of destination string (must be null terminate
 				  # destination array, $a2 is the input string, $a3 are the search characters, argument 4 is in the
 				  # stack and is the string to replace the characters with.
     lw $t0 0($sp)  # Load returnStr argument to $t0
-    addi $sp $sp -24  # Make space in stack to store values $s0 - $s5
+    addi $sp $sp -24  # Make space in stack to store values $s0 - $s4
     sw $ra 4($sp)  # Store return address in stack
     sw $s0 8($sp)
     sw $s1 12($sp)
@@ -126,8 +126,6 @@ replaceAllSubstr: # $a0 is address of destination string (must be null terminate
     move $a1 $s3  # Copy search characters into $a1
     jal countOccurrences
     move $v1 $v0
-    
-    beqz $v1 returnReplaceAllSubstr  # If there are no occurances, return the function
     
     # Find length of the input string
     li $t0 0  # Counter for finding string length
@@ -204,11 +202,13 @@ replaceAllSubstr: # $a0 is address of destination string (must be null terminate
     j returnReplaceAllSubstr
     
     inputStringIterationComplete:
+    add $t0 $s0 $t1  # Add counter to dst address
+    sb $0 0($t0)  # Last character is a null terminator
     move $v1 $t9  # Number of replacements
     
     returnReplaceAllSubstr:
     move $v0 $s0  # Move starting addess of dst into return
-    # Restore original values for $s0 - $s5
+    # Restore original values for $s0 - $s4
     lw $ra 4($sp)
     lw $s0 8($sp)
     lw $s1 12($sp)
@@ -219,10 +219,135 @@ replaceAllSubstr: # $a0 is address of destination string (must be null terminate
     jr $ra
 
 split:
-    # Define your code here
-    ###########################################
-    # DELETE THIS CODE. Only here to allow main program to run without fully implementing the function
-    li $v0, -200
-    li $v1, -200
-    ##########################################
+	addi $sp $sp -36  # Make space in stack to store values $s0 - $s7
+    sw $ra 0($sp)  # Store return address in stack
+    sw $s0 4($sp) 
+    sw $s1 8($sp)
+    sw $s2 12($sp)
+    sw $s3 16($sp)
+    sw $s4 20($sp)
+    sw $s5 24($sp)
+    sw $s6 28($sp)
+    sw $s7 32($sp)
+    move $s0 $a0  # Address of the word-aligned array that stores the starting addresses of each substring
+    move $s1 $a1  # Number of 32-bit words in the dst array. dstLen is guaranteed to be at least 1
+    move $s2 $a2  # The null-terminated string to split into tokens
+    move $s3 $a3  # ASCII character to serve as the delimiter
+    
+    # Error Checks=========================================================================================
+    
+    # Delimiter is within the range [32, 126]
+    blt $a3 32 errorInSplit  # Less than 32
+    bgt $a3 126 errorInSplit  # Greater than 126
+    
+    # String is empty
+    lb $t0 0($s2)
+    beqz $t0 errorInSplit
+    
+    # No Errors Detected Yet================================================================================
+    
+	# Find string length and token amount
+    li $t5 0  # Counter for finding string length
+    li $t4 0  # Counter for amount of tokens
+    findStringLengthSplit:
+    	add $t1 $s2 $t5  # Add counter to address
+    	lb $t1 0($t1)
+    	beqz $t1 stringLengthCalculatedSplit  # Null terminator found
+    	bne $t1 $s3 notEqualToDelimiter  # Delimiter check
+    	addi $t4 $t4 1  # Increment token amount
+    	notEqualToDelimiter:
+    	addi $t5 $t5 1  # Increment string length
+    	j findStringLengthSplit
+    	
+    # addi $t0 $s1 -1
+    # bgt $t4 $t0 errorInSplit  # If the occurances is greater than dstLen - 1, there's an error due to lack of space
+    
+    stringLengthCalculatedSplit:
+    sw $s2 0($s0)  # The entire input string is considered a token
+    li $s7 1  # Counter for number of tokens
+    blt $t4 0 noOccurancesSplit  # If there are no occurances, it's a special case
+    li $s4 0  # Counter that traverses through the input string
+    li $s5 0  # Counter that traverses through the dst address
+    addi $s6 $t5 -1  # String length - 1 for traversal purposes
+
+    
+    # First character delimiter check
+    lb $t0 0($s2)
+    bne $t0 $s3 firstCharNotDelimiter
+    sb $0 0($s2)  # Set first character to null terminator
+    sw $s2 0($s0)  # Set the first word of the array to be the address for the beginning of the input string
+    addi $s4 $s4 1  # Increment input string counter, dst address counter, and token counter
+    addi $s5 $s5 4
+    addi $s7 $s7 1
+    firstCharNotDelimiter:
+    
+    # Last character delimiter check
+    add $t0 $s2 $s6  # Address is now the last character of the string
+    lb $t2 0($t0)
+    bne $t2 $s3 lastCharNotDelimiter
+    sb $0 ($t0)  # Set last character to null terminator
+    li $t6 4
+    mult $t4 $t6
+    mflo $t6
+    add $t3 $s0 $t1  # Address for the last word of the array
+    sw $t0 ($t3)  # Set the last word of the array to be address of the last char in the string
+    addi $s7 $s7 1
+    lastCharNotDelimiter:
+    
+    
+    splitLoop:
+    	move $a0 $s2  # Load input string
+    	move $a1 $s3  # Load deliminator
+    	move $a2 $s4  # Load current index
+    	jal indexOf
+    	move $t0 $v0
+    	beq $t0 $s6 splitLoopCompleted  # Last character is a deliminator and already accounted for
+    	bgt $s5 $s2 splitLoopCancelled  # Due to a lack of space in dstLen
+    	beq $t0 -1 splitLoopCompleted
+    	#bne $t0 $s4 normalCase  # Otherwise, they're consecutive deliminators
+
+    	#normalCase:
+    	add $t1 $s2 $t0  # Add counter to input string
+    	sb $0 0($t1)  # Set deliminator character to null terminator
+    	add $t2 $s0 $s5  # Add counter to dst array
+    	addi $t1 $t1 1  # Address of character after null terminator
+    	sw $t1 0($t2)  # Set the word of the array to be the address of the string after the deliminator ie null terminator
+    	add $s4 $s4 $t0  # Increment input string counter, dst address counter, and tokens counter
+    	addi $s4 $s4 1
+    	addi $s5 $s5 4
+    	addi $s7 $s7 1
+    	j splitLoop
+    
+    
+    noOccurancesSplit:
+    li $v0 1
+    li $v1 0
+    j returnSplit
+    
+    errorInSplit:
+    li $v0 -1
+    li $v1 -1
+    j returnSplit
+    
+    splitLoopCancelled:
+    move $v0 $s7  # Number of 32 bit words in dst
+    li $v1 -1
+    j returnSplit
+    
+    splitLoopCompleted:
+    move $v0 $s7  # Number of 32 bit words in dst
+    li $v1 0  # Successful tokenizing 
+    
+    returnSplit:
+    lw $ra 0($sp)  # Get return address and restore values of #s0 - #s7
+    lw $s0 4($sp) 
+    lw $s1 8($sp)
+    lw $s2 12($sp)
+    lw $s3 16($sp)
+    lw $s4 20($sp)
+    lw $s5 24($sp)
+    lw $s6 28($sp)
+    lw $s7 32($sp)
+    addi $sp $sp 36
+    
     jr $ra
