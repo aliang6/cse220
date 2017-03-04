@@ -13,7 +13,7 @@ indexOf:  # $a0 is the string, $a1 is the char to find, $a2 is the index to star
 	li $v0 -1  # Default immediate
 	bltz $a2 returnIndexOf  # If index is less than zero
 	# Find null terminator
-	li $t9 0  # Counter
+	move $t9 $a2  # Counter
 	findNullIndex:
 	add $t3 $a0 $t9  # Add counter to address
     lb $t4 0($t3)
@@ -258,26 +258,25 @@ split:
     	notEqualToDelimiter:
     	addi $t5 $t5 1  # Increment string length
     	j findStringLengthSplit
-    	
-    # addi $t0 $s1 -1
-    # bgt $t4 $t0 errorInSplit  # If the occurances is greater than dstLen - 1, there's an error due to lack of space
     
     stringLengthCalculatedSplit:
     sw $s2 0($s0)  # The entire input string is considered a token
     li $s7 1  # Counter for number of tokens
+    sw $s2 0($s0)  # Set the first word of the array to be the address for the beginning of the input string
     blt $t4 0 noOccurancesSplit  # If there are no occurances, it's a special case
     li $s4 0  # Counter that traverses through the input string
-    li $s5 0  # Counter that traverses through the dst address
-    addi $s6 $t5 -1  # String length - 1 for traversal purposes
-
+    li $s5 4  # Counter that traverses through the dst address
+    move $s6 $t5  # String length
+    
     
     # First character delimiter check
     lb $t0 0($s2)
     bne $t0 $s3 firstCharNotDelimiter
     sb $0 0($s2)  # Set first character to null terminator
-    sw $s2 0($s0)  # Set the first word of the array to be the address for the beginning of the input string
     addi $s4 $s4 1  # Increment input string counter, dst address counter, and token counter
     addi $s5 $s5 4
+    addi $t1 $s2 1
+    sw $t1 4($s0)  # Set the last word of the array to be address of the last char in the string
     addi $s7 $s7 1
     firstCharNotDelimiter:
     
@@ -289,7 +288,7 @@ split:
     li $t6 4
     mult $t4 $t6
     mflo $t6
-    add $t3 $s0 $t1  # Address for the last word of the array
+    add $t3 $s0 $t6  # Address for the last word of the array
     sw $t0 ($t3)  # Set the last word of the array to be address of the last char in the string
     addi $s7 $s7 1
     lastCharNotDelimiter:
@@ -297,22 +296,25 @@ split:
     
     splitLoop:
     	move $a0 $s2  # Load input string
-    	move $a1 $s3  # Load deliminator
+    	move $a1 $s3  # Load delimiter
     	move $a2 $s4  # Load current index
     	jal indexOf
     	move $t0 $v0
-    	beq $t0 $s6 splitLoopCompleted  # Last character is a deliminator and already accounted for
-    	bgt $s5 $s2 splitLoopCancelled  # Due to a lack of space in dstLen
+    	beq $t0 $s6 splitLoopCompleted  # Last character is a delimiter and already accounted for
+    	srl $t9 $s5 2  # Divide by 4
+    	bge $t9 $s1 splitLoopCancelled  # Due to a lack of space in dstLen
     	beq $t0 -1 splitLoopCompleted
-    	#bne $t0 $s4 normalCase  # Otherwise, they're consecutive deliminators
-
-    	#normalCase:
     	add $t1 $s2 $t0  # Add counter to input string
-    	sb $0 0($t1)  # Set deliminator character to null terminator
+    	sb $0 0($t1)  # Set delimiter character to null terminator
     	add $t2 $s0 $s5  # Add counter to dst array
+    	#bne $t0 $s4 normalCase  # Otherwise, they're consecutive delimiters
+    	#sw $t1 0($t2)  # Set the word of the array to be the null terminator
+    	#j incrementSplitCounters
+    	#normalCase:
     	addi $t1 $t1 1  # Address of character after null terminator
-    	sw $t1 0($t2)  # Set the word of the array to be the address of the string after the deliminator ie null terminator
-    	add $s4 $s4 $t0  # Increment input string counter, dst address counter, and tokens counter
+    	sw $t1 0($t2)  # Set the word of the array to be the address of the string after the delimiter ie null terminator
+    	incrementSplitCounters:
+    	move $s4 $t0  # Increment input string counter, dst address counter, and tokens counter
     	addi $s4 $s4 1
     	addi $s5 $s5 4
     	addi $s7 $s7 1
@@ -330,6 +332,7 @@ split:
     j returnSplit
     
     splitLoopCancelled:
+    addi $s7 $s7 1  # Increment token counter one last time
     move $v0 $s7  # Number of 32 bit words in dst
     li $v1 -1
     j returnSplit

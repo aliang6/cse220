@@ -26,10 +26,10 @@ replaceAllSubstr_replaceStr: .asciiz "A"
 
 split_msg: .asciiz "\n##### Testing split #####"
 .align 2
-split_dst: .space 40
-split_dstLen: .word 10
-split_str: .asciiz "da"
-split_delimiter: .ascii "a"
+split_dst: .space 32
+split_dstLen: .word 8
+split_str: .asciiz "ugga mugga?"
+split_delimiter: .ascii "g"
 
 
 ##################################################################
