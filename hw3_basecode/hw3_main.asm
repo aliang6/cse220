@@ -5,8 +5,8 @@ newline:  .asciiz "\n"
 # Arguments for test cases. You should change these to create your own tests.
 indexOf_msg: .asciiz "##### Testing indexOf #####"
 indexOf_str: .asciiz ""
-indexOf_ch: .asciiz "c"
-indexOf_startIndex: .word 10
+indexOf_ch: .asciiz "q"
+indexOf_startIndex: .word 0
 
 replaceAllChar_msg: .asciiz "\n##### Testing replaceAllChar #####"
 replaceAllChar_str: .asciiz "   "

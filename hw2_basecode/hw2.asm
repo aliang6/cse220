@@ -94,7 +94,7 @@ btof: #a0 = address of input
 	blt $t1 43 invalidInputbtof	 # Check if less than lower bound
 	bgt $t1 110 invalidInputbtof  # Check if above upper bound
 	beq $t1 78 nan  # Branch to NaN check
-	lb $t1 5($t9) # Load sixth byte of string to $t1
+	lb $t1 4($t9) # Load sixth byte of string to $t1
 	beq $t1 0 infZero  # Branch to Inf or Zero check if sixth byte is null
 	
 	# Input Check
@@ -191,7 +191,7 @@ btof: #a0 = address of input
 		j setReturnbtof
 		
 	nan:
-		lb $t1 4($t9)
+		lb $t1 3($t9)
 		bnez $t1 invalidInputbtof  # Invalid input if fifth character is not null, fourth being new line
 		lb $t1 1($t9)
 		bne $t1 97 invalidInputbtof  # Invalid input if second character is not 'a'
@@ -423,7 +423,7 @@ print_binary_product:
 	li $a1 127  # IEE 754 Single Precision is excess-127
 	jal fromExcessk
 	move $s0 $v1  # Copy the return value
-	beqz $s0 printExponentProduct  # If the value is positive
+	blez $s0 printExponentProduct  # If the value is positive
 	li $v0 11
 	li $a0 43  # ASCII for +
 	syscall
