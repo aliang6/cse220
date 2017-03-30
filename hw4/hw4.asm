@@ -18,9 +18,9 @@
 # return 0 for success and -1 for error
 set_slot:
 	# Load a4 - a6 into t registers
-	lw $t0 0($sp)  # col
-	lw $t1 4($sp)  # c 
-	lw $t2 8($sp)  # turn_num
+	lb $t0 0($sp)  # col
+	lb $t1 4($sp)  # c 
+	lb $t2 8($sp)  # turn_num
 	
 	# Error checks
 	li $v0 -1
@@ -52,7 +52,7 @@ set_slot:
 	bltz $t2 setSlotReturn
 	bgt $t2 255 setSlotReturn
 	
-	# No errors
+	# No errors detected
 
     # obj_arr[i][j] = base_address + (row_size * i) + (size_of(obj) * j)
     # row_size = num_cols * size_of(obj)
@@ -72,13 +72,46 @@ set_slot:
     jr $ra
 
 
+# a0 = board array; a1 = num_rows =; a2 = num_cols; a3 = row; a4 = col
+# Return slot char in $v0 and turn number in $v1, else (-1, -1) for error
 get_slot:
-    # Define your code here
-    ###########################################
-    # DELETE THIS CODE.
-    li $v0, -200
-    li $v1, -200
-    ##########################################
+	# Load $a4 
+	lb $t0 0($sp)  # col
+	
+	# Error checks
+	li $v0 -1
+	li $v1 -1
+	
+	# num_rows is less than 0
+	bltz $a1 getSlotReturn
+	
+	# num_cols is less than 0
+	bltz $a2 getSlotReturn
+	
+	# row is outside the range [0, num_rows - 1]
+	bltz $a3 getSlotReturn
+	addi $t3 $a1 -1  # num_rows - 1
+	bgt $a3 $t3 getSlotReturn
+	
+	# col is outside the range [0, num_cols - 1]
+	bltz $t0 getSlotReturn
+	addi $t3 $a2 -1  # num_rows - 1
+	bgt $t0 $t3 getSlotReturn
+	
+	# No errors detected
+	
+    # obj_arr[i][j] = base_address + (row_size * i) + (size_of(obj) * j)
+    # row_size = num_cols * size_of(obj)
+    li $t3 2  # Size of Object
+	mul $t4 $a2 $t3 # row_size = num_cols * object_size
+    mul $t4 $t4 $a3  # row_size * i
+    mul $t5 $t0 $t3  # object_size * j
+    add $t4 $t4 $t5  # (row_size * i) + (size_of(obj) * j)
+    add $t4 $t0 $t4  # obj_arr[i][j]
+    lb $v0 0($t4)  # Load upper byte
+    lb $v1 1($t4)  # Load lower byte
+    
+    getSlotReturn:
     jr $ra
 
 clear_board:
@@ -99,11 +132,6 @@ clear_board:
 	lw $s4 16($sp)
 	lw $s5 20($sp)
 	addi $sp $sp 24
-    # Define your code here
-    ###########################################
-    # DELETE THIS CODE.
-    li $v0, -200
-    ##########################################
     jr $ra
 
 
