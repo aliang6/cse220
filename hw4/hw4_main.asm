@@ -17,9 +17,11 @@ get_slot_msg: .asciiz "##### Testing get_slot #####"
 get_slot_row: .word 9
 get_slot_col: .word 9
 
-clear_board_msg: .asciiz "##### Testing get_slot #####"
+clear_board_msg: .asciiz "##### Testing clear_board #####"
 
+load_board_msg: .asciiz "##### Testing load_board #####"
 
+display_board_msg: .asciiz "##### Testing display_board #####"
 
 ##################################################################
 # Constants
@@ -110,13 +112,36 @@ main:
     move $a0, $v0
     li $v0, PRINT_INT
     syscall
+    la $a0, newline
+    li $v0, PRINT_STRING
+    syscall
+    
+	
+    ##########################
+    # load_board
+    ##########################
     
     
     ##########################
-    # clear_board
+    # display_board
     ##########################
-    
-    
+    la $a0, display_board_msg
+    li $v0, PRINT_STRING
+    syscall
+    la $a0, newline
+    li $v0, PRINT_STRING
+    syscall
+    la $a0 boardArray
+    lw $a1 num_rows
+    lw $a2 num_cols
+    jal display_board
+    # print return value
+    move $a0, $v0
+    li $v0, PRINT_INT
+    syscall
+    la $a0, newline
+    li $v0, PRINT_STRING
+    syscall
     
     # Exit the program
     li	$v0, 10
