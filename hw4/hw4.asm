@@ -4,10 +4,6 @@
 # sbuid: 111008856
 ##############################################################
 
-##############################################################
-# DO NOT DECLARE A .DATA SECTION IN YOUR HW. IT IS NOT NEEDED
-##############################################################
-
 .text
 
 ##############################
@@ -18,9 +14,9 @@
 # return 0 for success and -1 for error
 set_slot:
 	# Load a4 - a6 into t registers
-	lb $t0 0($sp)  # col
-	lb $t1 4($sp)  # c 
-	lb $t2 8($sp)  # turn_num
+	lw $t0 0($sp)  # col
+	lw $t1 4($sp)  # c 
+	lw $t2 8($sp)  # turn_num
 	
 	# Error checks
 	li $v0 -1
@@ -33,13 +29,11 @@ set_slot:
 	
 	# row is outside the range [0, num_rows - 1]
 	bltz $a3 setSlotReturn
-	addi $t3 $a1 -1  # num_rows - 1
-	bgt $a3 $t3 setSlotReturn
+	bge $a3 $a1 setSlotReturn
 	
 	# col is outside the range [0, num_cols - 1]
 	bltz $t0 setSlotReturn
-	addi $t3 $a2 -1  # num_rows - 1
-	bgt $t0 $t3 setSlotReturn
+	bge $t0 $a2 setSlotReturn
 	
 	# c is not character 'R', 'Y', or '.'
 	beq $t1 82 cIsValid  # If equal to 'R'
@@ -52,7 +46,7 @@ set_slot:
 	bltz $t2 setSlotReturn
 	bgt $t2 255 setSlotReturn
 	
-	# No errors detected
+	# No errors detected 
 
     # obj_arr[i][j] = base_address + (row_size * i) + (size_of(obj) * j)
     # row_size = num_cols * size_of(obj)
@@ -61,7 +55,7 @@ set_slot:
     mul $t4 $t4 $a3  # row_size * i
     mul $t5 $t0 $t3  # object_size * j
     add $t4 $t4 $t5  # (row_size * i) + (size_of(obj) * j)
-    add $t4 $t0 $t4  # obj_arr[i][j]
+    add $t4 $a0 $t4  # obj_arr[i][j]
     sb $t1 0($t4)  # Store character in obj_arr[i][j] in upper byte
     sb $t2 1($t4)  # Store turn_num in lower byte 
 	
@@ -76,7 +70,7 @@ set_slot:
 # Return slot char in $v0 and turn number in $v1, else (-1, -1) for error
 get_slot:
 	# Load $a4 
-	lb $t0 0($sp)  # col
+	lw $t0 0($sp)  # col
 	
 	# Error checks
 	li $v0 -1
@@ -107,31 +101,81 @@ get_slot:
     mul $t4 $t4 $a3  # row_size * i
     mul $t5 $t0 $t3  # object_size * j
     add $t4 $t4 $t5  # (row_size * i) + (size_of(obj) * j)
-    add $t4 $t0 $t4  # obj_arr[i][j]
+    add $t4 $a0 $t4  # obj_arr[i][j]
     lb $v0 0($t4)  # Load upper byte
-    lb $v1 1($t4)  # Load lower byte
+    lbu $v1 1($t4)  # Load lower byte
     
     getSlotReturn:
     jr $ra
 
+# a0 = board array; $a1 = num_rows; $a2 = num_cols
+# Return 0 for success, -1 otherwise
 clear_board:
-	# Save s registers
-	addi $sp $sp -24
-	sw $s0 0($sp)
-	sw $s1 4($sp)
-	sw $s2 8($sp)
-	sw $s3 12($sp)
-	sw $s4 16($sp)
-	sw $s5 20($sp)
+	# Save return address and s registers
+	addi $sp $sp -28
+	sw $ra 0($sp)
+	sw $s0 4($sp)
+	sw $s1 8($sp)
+	sw $s2 12($sp)
+	sw $s3 16($sp)
+	sw $s4 20($sp)
+	sw $s5 24($sp)
+	# Move arguments into s registers
+	move $s0 $a0
+	move $s1 $a1  
+	move $s2 $a2  
+	
+	# Error checks
+	li $v0 -1
+	
+	# num_rows is less than 0
+	bltz $s1 returnClearBoard
+	
+	# num_cols is less than 0
+	bltz $s2 returnClearBoard
+	
+	# No errors detected
+	#addi $t0 $s1 -1  # num_rows - 1
+	#addi $t1 $s2 -1  # num_cols - 1 
+	#mul $s3 $t0 $t1  # Total number of slots
+	li $s4 0  # Current row
+	clearBoardRowLoop:
+		bge $s4 $s1 boardCleared  # If the current row is equal or greater than the num_rows, the board is cleared
+		li $s5 0  # Current column
+		clearBoardColLoop:
+			bge $s5 $s2 clearBoardNextRow  # If current column is equal or greater than the num_cols, move to next row
+			# Load arguments for set_slot
+			move $a0 $s0  # Load board array
+			move $a1 $s1  # Load num_rows
+			move $a2 $s2  # Load num_cols
+			move $a3 $s4  # Load current rows
+			addi $sp $sp -12
+			sw $s5 0($sp)  # Load current col
+			li $t0 46
+			sw $t0 4($sp)  # Load "."
+			li $t0 0  # Load 0 turn_num
+			sw $t0 8($sp)  # Load 0 turn_num
+			jal set_slot
+			addi $sp $sp 12
+			addi $s5 $s5 1  # Increment columns
+			j clearBoardColLoop
+		clearBoardNextRow:
+		addi $s4 $s4 1  # Increment rows
+		j clearBoardRowLoop
+	
+	boardCleared:
+	li $v0 0
 
+	returnClearBoard:
     # Return s registers to their original values
-	lw $s0 0($sp)
-	lw $s1 4($sp)
-	lw $s2 8($sp)
-	lw $s3 12($sp)
-	lw $s4 16($sp)
-	lw $s5 20($sp)
-	addi $sp $sp 24
+    lw $ra 0($sp)
+	lw $s0 4($sp)
+	lw $s1 8($sp)
+	lw $s2 12($sp)
+	lw $s3 16($sp)
+	lw $s4 20($sp)
+	lw $s5 24($sp)
+	addi $sp $sp 28
     jr $ra
 
 
