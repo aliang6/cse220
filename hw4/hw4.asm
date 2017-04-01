@@ -184,14 +184,13 @@ clear_board:
 # Returns $v0 = num of rows; $v1 = num of cols; otherwise, (-1, -1) on error
 load_board:
 	# Save return address and s registers
-	addi $sp $sp -28
+	addi $sp $sp -24
 	sw $ra 0($sp)
 	sw $s0 4($sp)
 	sw $s1 8($sp)
 	sw $s2 12($sp)
 	sw $s3 16($sp)
 	sw $s4 20($sp)
-	sw $s5 24($sp)
 	# Move arguments into s registers
 	move $s0 $a0
 	move $s1 $a1
@@ -310,16 +309,161 @@ load_board:
 	lw $s2 12($sp)
 	lw $s3 16($sp)
 	lw $s4 20($sp)
-	lw $s5 24($sp)
-	addi $sp $sp 28
+	addi $sp $sp 24
     jr $ra
 
+
 save_board:
-    # Define your code here
-    ###########################################
-    # DELETE THIS CODE.
-    li $v0, -200
-    ##########################################
+    # Save return address and s registers
+	addi $sp $sp -32
+	sw $ra 0($sp)
+	sw $s0 4($sp)
+	sw $s1 8($sp)
+	sw $s2 12($sp)
+	sw $s3 16($sp)
+	sw $s4 20($sp)
+	sw $s5 24($sp)
+	sw $s6 28($sp)
+	# Move arguments into s registers
+	move $s0 $a0  # Board Array
+	move $s1 $a1  # num_rows
+	move $s2 $a2  # num_cols
+	
+	# Error Checks
+	# num_rows is less than 0
+	bltz $s1 errorWriteBoard
+	
+	# num_cols is less than 0
+	bltz $s2 errorWriteBoard
+	
+	# File check
+	move $a0 $a3  # Load filename
+	li $a1 1  # Flag = 1 (write-only with create)
+	li $a2 0  # Mode (ignored)
+	li $v0 13  # Syscall 13: open file
+	syscall 
+	move $s6 $v0  # Copy file descriptor
+	bltz $v0 errorWriteBoard  # Negative means file error
+	
+	# Write first line
+	addi $sp $sp -5
+	
+	# num_rows
+	li $t1 10
+	div $s1 $t1  # num_rows divided by 10
+	mflo $t0  # Quotient
+	addi $t0 $t0 48  # Int to ASCII
+	sb $t0 0($sp)
+	mfhi $t0
+	addi $t0 $t0 48  # Int to ASCII
+	sb $t0 1($sp)  # Remainder
+	# num_cols
+	div $s2 $t1  # num_cols divided by 10
+	mflo $t0  # Quotient
+	addi $t0 $t0 48  # Int to ASCII
+	sb $t0 3($sp)
+	mfhi $t0
+	addi $t0 $t0 48  # Int to ASCII
+	sb $t0 4($sp)  # Remainder
+	sb $t1 5($sp)  # New line
+	
+	move $a0 $s6  # File descriptor
+	move $a1 $sp  # Address of output buffer
+	li $a2 5  # Maximum characters to write
+	li $v0 15  # Write file
+	syscall
+	bltz $v0 errorWriteBoard  # Error if return is negative
+	addi $sp $sp 5
+	
+	
+	li $s3 0  # Counter for number of pieces played
+	li $s4 0  # Top row is row num_rows - 1
+	writeBoardRowLoop:
+		bge $s4 $s2 writeComplete  # If the current row is less than zero, the board is displayed
+		li $s5 0  # Current column
+		writeBoardColLoop:
+			bge $s5 $s2 writeBoardNextRow  # If current column is equal or greater than the num_cols, move to next row
+			# Load arguments for set_slot
+			move $a0 $s0  # Load board array
+			move $a1 $s1  # Load num_rows
+			move $a2 $s2  # Load num_cols
+			move $a3 $s4  # Load current rows
+			addi $sp $sp -4
+			sw $s5 0($sp)  # Load current col
+			jal get_slot
+			addi $sp $sp 4
+			beq $v0 46 writeBoardIncrCol  # Do nothing if char is '.' 
+			
+			addi $sp $sp 9
+			# Current row
+			li $t1 10
+			div $s4 $t1  # num_rows divided by 10
+			mflo $t0  # Quotient
+			addi $t0 $t0 48  # Int to ASCII
+			sb $t0 0($sp)
+			mfhi $t0
+			addi $t0 $t0 48  # Int to ASCII
+			sb $t0 1($sp)  # Remainder
+			# Current column
+			div $s5 $t1  # num_cols divided by 10
+			mflo $t0  # Quotient
+			addi $t0 $t0 48  # Int to ASCII
+			sb $t0 3($sp)
+			mfhi $t0
+			addi $t0 $t0 48  # Int to ASCII
+			sb $t0 4($sp)  # Remainder
+			# Character
+			sb $v0 5($sp)  # Char 
+			# Turn_num
+			li $t0 100
+			div $v1 $t0  # Turn_num divided by 100
+			mflo $t0  # Hundreds value of turn_num
+			addi $t0 $t0 48  # Int to ASCII
+			sb $t0 6($sp)
+			mfhi $t0  # Tens value of turn_num
+			div $t0 $t1  # Remainder of turn_num/100 divided by 10
+			mflo $t0 
+			addi $t0 $t0 48  # Int to ASCII
+			sb $t0 7($sp)
+			mfhi $t0  # Ones values of turn_num
+			addi $t0 $t0 48  # Int to ASCII
+			sb $t0 8($sp)
+			sb $t1 9($sp)  # New line
+			
+			# Write to file
+			move $a0 $s0  # Address of board array
+			move $a1 $sp  # Address of output buffer
+			li $a2 9  # Maximum characters to write
+			li $v0 15  # Write file
+			syscall
+			bltz $v0 errorWriteBoard  # Error if return is negative
+			addi $sp $sp 9
+			
+			writeBoardIncrCol:
+			addi $s5 $s5 1  # Increment columns
+			j writeBoardColLoop
+		writeBoardNextRow:
+		addi $s4 $s4 -1  # Decrement rows
+		j writeBoardRowLoop
+	
+	
+	writeComplete:
+		j returnWriteBoard
+	
+	errorWriteBoard:
+	li $v0 -1
+	
+	returnWriteBoard:
+    # Return s registers to their original values
+    lw $ra 0($sp)
+	lw $s0 4($sp)
+	lw $s1 8($sp)
+	lw $s2 12($sp)
+	lw $s3 16($sp)
+	lw $s4 20($sp)
+	lw $s5 24($sp)
+	lw $s6 28($sp)
+	addi $sp $sp 32
     jr $ra
 
 validate_board:
@@ -348,7 +492,7 @@ display_board:
 	sw $s5 24($sp)
 	# Move arguments into s registers
 	move $s0 $a0
-	move $s1 $a1  
+	move $s1 $a1 
 	move $s2 $a2  
 	
 	# Error checks
