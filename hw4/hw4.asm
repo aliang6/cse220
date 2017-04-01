@@ -180,13 +180,138 @@ clear_board:
 # Part II FUNCTIONS
 ##############################
 
+# $a0 = board array; $a1 = filename
+# Returns $v0 = num of rows; $v1 = num of cols; otherwise, (-1, -1) on error
 load_board:
-    # Define your code here
-    ###########################################
-    # DELETE THIS CODE.
-    li $v0, -200
-    li $v1, -200
-    ##########################################
+	# Save return address and s registers
+	addi $sp $sp -28
+	sw $ra 0($sp)
+	sw $s0 4($sp)
+	sw $s1 8($sp)
+	sw $s2 12($sp)
+	sw $s3 16($sp)
+	sw $s4 20($sp)
+	sw $s5 24($sp)
+	# Move arguments into s registers
+	move $s0 $a0
+	move $s1 $a1
+	
+	# Error Checks
+	
+	# File check
+	move $a0 $a1  # Load filename
+	li $a1 0  # Flag = 0 (read-only)
+	li $a2 0  # Mode (ignored)
+	li $v0 13  # Syscall 13: open file
+	syscall 
+	move $s2 $v0  # Copy file descriptor
+	bltz $v0 errorLoadBoard  # Negative means file error
+	
+	# Read file
+	
+	# First line
+	move $a0 $s2  # File descriptor
+	addi $sp $sp -12  # 9 bytes for line including newline
+	move $a1 $sp  # Address of input buffer
+	li $a2 5  # Read first five characters
+	li $v0 14  # Syscall 14: read file
+	syscall
+	bltz $v0 errorLoadBoard  # Negative means error
+	# num_rows
+	lbu $s3 0($sp) 
+	li $t0 10
+	mul $s3 $s3 $t0
+	lbu $t0 1($sp)
+	add $s3 $s3 $t0
+	addi $s3 $s3 -528  # ASCII to int
+	beqz $s3 errorLoadBoard  # Num_rows = 0 results in error
+	# num_cols
+	lbu $s4 2($sp) 
+	li $t0 10
+	mul $s4 $s4 $t0
+	lbu $t0 3($sp)
+	add $s4 $s4 $t0
+	addi $s4 $s4 -528  # ASCII to int
+	beqz $s4 errorLoadBoard  # Num_cols = 0 results in error
+	
+	# Subsequent Lines
+	loadNextLine:
+		move $a0 $s2  # File descriptor
+		move $a1 $sp  # Address of input buffer
+		li $a2 9  # Read next 9 characters
+		li $v0 14  # Syscall 14: read file
+		syscall
+		blez $v0 boardLoaded  # 0 = end of file
+		move $a0 $s0  # Copy board array
+		move $a1 $s3  # num_rows
+		move $a2 $s4  # num_cols	
+		
+		# Row
+		lbu $a3 0($sp) 
+		li $t0 10
+		mul $a3 $a3 $t0
+		lbu $t0 1($sp)
+		add $a3 $a3 $t0
+		addi $a3 $a3 -528  # ASCII to int
+		bltz $a3 errorLoadBoard  # row < 0 results in error
+		bgt $a3 $s3 errorLoadBoard  # row > num_rows results in error
+		
+		# column
+		lbu $t9 2($sp)
+		li $t0 10
+		mul $t9 $t9 $t0
+		lbu $t0 3($sp)
+		add $t9 $t9 $t0
+		addi $t9 $t9 -528  # ASCII to int
+		bltz $t9 errorLoadBoard  # col < 0 results in error
+		bgt $t9 $s4 errorLoadBoard  # col > num_cols results in error
+		
+		# Char symbol
+		lbu $t8 4($sp)
+		
+		# Turn number
+		lbu $t7 5($sp)
+		li $t0 10
+		mul $t7 $t7 $t0
+		lbu $t6 6($sp)
+		add $t7 $t7 $t6
+		mul $t7 $t7 $t0
+		lbu $t6 7($sp)
+		add $t7 $t7 $t6
+		addi $t7 $t7 -5328  # ASCII to int
+		bltz $t7 errorLoadBoard  # turn_num < 0 results in error
+		bgt $t7 255 errorLoadBoard  # turn_num > 255 results in error
+		
+		# Push $a4-$a6 arguments to stack
+		addi $sp $sp -12
+		sw $t9 0($sp)
+		sw $t8 4($sp)
+		sw $t7 8($sp)	
+		jal set_slot
+		addi $sp $sp 12
+		
+		j loadNextLine
+	
+	boardLoaded:
+	addi $sp $sp 12
+	move $v0 $s3  # num_rows
+	move $v1 $s4  # num_cols
+	j returnLoadBoard
+	
+	errorLoadBoard:
+	li $v0 -1
+	li $v1 -1
+	
+	returnLoadBoard:
+    # Return s registers to their original values
+    lw $ra 0($sp)
+	lw $s0 4($sp)
+	lw $s1 8($sp)
+	lw $s2 12($sp)
+	lw $s3 16($sp)
+	lw $s4 20($sp)
+	lw $s5 24($sp)
+	addi $sp $sp 28
     jr $ra
 
 save_board:
@@ -236,9 +361,9 @@ display_board:
 	bltz $s2 returnDisplayBoard
 	
 	# No errors detected
-	li $s4 0  # Current row
+	addi $s4 $s1 -1  # Top row is row num_rows - 1
 	displayBoardRowLoop:
-		bge $s4 $s1 boardDisplayed  # If the current row is equal or greater than the num_rows, the board is cleared
+		bltz $s4 boardDisplayed  # If the current row is less than zero, the board is displayed
 		li $s5 0  # Current column
 		displayBoardColLoop:
 			bge $s5 $s2 displayBoardNextRow  # If current column is equal or greater than the num_cols, move to next row
@@ -257,7 +382,7 @@ display_board:
 			addi $s5 $s5 1  # Increment columns
 			j displayBoardColLoop
 		displayBoardNextRow:
-		addi $s4 $s4 1  # Increment rows
+		addi $s4 $s4 -1  # Decrement rows
 		li $a0 10  # New line character
 		li $v0 11  # Print character
 		syscall

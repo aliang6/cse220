@@ -4,8 +4,8 @@ newline:  .asciiz "\n"
 ##################################################################
 # Arguments for test cases.
 boardArray: .space 210
-num_rows: .word 10
-num_cols: .word 10
+num_rows: .word 4
+num_cols: .word 5
 
 set_slot_msg: .asciiz "##### Testing set_slot #####"
 set_slot_row: .word 9
@@ -20,6 +20,8 @@ get_slot_col: .word 9
 clear_board_msg: .asciiz "##### Testing clear_board #####"
 
 load_board_msg: .asciiz "##### Testing load_board #####"
+load_board_fileName: .asciiz "load_board_example.txt"
+
 
 display_board_msg: .asciiz "##### Testing display_board #####"
 
@@ -120,6 +122,28 @@ main:
     ##########################
     # load_board
     ##########################
+    la $a0, load_board_msg
+    li $v0, PRINT_STRING
+    syscall
+    la $a0, newline
+    li $v0, PRINT_STRING
+    syscall
+    la $a0 boardArray
+    la $a1 load_board_fileName
+    jal load_board
+    # print return value
+    move $a0, $v0
+    li $v0, PRINT_INT
+    syscall
+    li $a0 32
+    li $v0 PRINT_CHAR
+    syscall
+    move $a0, $v1
+    li $v0, PRINT_INT
+    syscall
+    la $a0, newline
+    li $v0, PRINT_STRING
+    syscall
     
     
     ##########################
