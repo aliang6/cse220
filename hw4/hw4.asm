@@ -596,7 +596,7 @@ display_board:
 			move $a0 $s0  # Load board array
 			move $a1 $s1  # Load num_rows
 			move $a2 $s2  # Load num_cols
-			move $a3 $s4  # Load current rows
+			move $a3 $s4  # Load current row
 			addi $sp $sp -4
 			sw $s5 0($sp)  # Load current col
 			jal get_slot
@@ -707,12 +707,97 @@ drop_piece:
     jr $ra
 
 undo_piece:
-    # Define your code here
-    ###########################################
-    # DELETE THIS CODE.
-    li $v0, -200
-    li $v1, -200
-    ##########################################
+    addi $sp $sp -36
+	sw $ra 0($sp)
+	sw $s0 4($sp)
+	sw $s1 8($sp)
+	sw $s2 12($sp)
+	sw $s3 16($sp)
+	sw $s4 20($sp)
+	sw $s5 24($sp)
+	sw $s6 28($sp)
+	sw $s7 32($sp)
+    move $s0 $a0  # board array
+    move $s1 $a1  # num_rows
+    move $s2 $a2  # num_cols
+    li $s3 0  # Row of most recent piece
+    li $s4 0  # Column of most recent piece
+    li $s5 0  # Turn_num of most recent piece
+    addi $sp $sp -4
+    
+    # Error checks
+    bltz $s1 errorUndoPiece  # num_rows < 0
+    bltz $s2 errorUndoPiece  # num_cols < 0
+    
+    li $s6 0  # Current column
+	undoPieceRowLoop:
+		bge $s6 $s2 undoPieceFound  # If the current col >= num_col, the most recent piece has been found
+		addi $s7 $s1 -1  # Current row
+		undoPieceColLoop:
+			bltz $s7 undoPieceNextRow  # If current row is less than or equal to zero, move to next row
+			# Load arguments for get_slot
+			move $a0 $s0  # Load board array
+			move $a1 $s1  # Load num_rows
+			move $a2 $s2  # Load num_cols
+			move $a3 $s7  # Load current row
+			addi $sp $sp -4
+			sw $s6 0($sp)  # Load current col
+			jal get_slot
+			addi $sp $sp 4
+			beq $v0 46 pieceNotFound  # If char is "."
+			ble $v1 $s5 notMostRecent  # If piece's turn is less than the highest turn_num found before this point
+			move $s3 $s7  # Update most recent piece row
+			move $s4 $s6  # Update most recent piece column
+			move $s5 $v1  # Update most recent piece turn_num
+			sw $v0 0($sp)  # Update most recent piece char
+			notMostRecent:
+			j undoPieceNextRow  # Increment row; topmost column piece found, 
+			pieceNotFound:
+			addi $s7 $s7 -1  # Decrement current row
+			j undoPieceColLoop
+		undoPieceNextRow:
+		addi $s6 $s6 1 # Increment current column
+		j undoPieceRowLoop
+    
+    undoPieceFound:
+    # Save char
+    lw $s6 0($sp)  # Char of most recent piece
+    addi $sp $sp 4
+    beqz $s5 errorUndoPiece  # If turn_num of most recent piece is zero
+
+    # Undo most recent piece
+    move $a0 $s0  # Board array
+    move $a1 $s1  # num_rows
+    move $a2 $s2  # num_cols
+    move $a3 $s3  # Row of most recent piece
+    addi $sp $sp -12
+    sw $s4 0($sp)  # Column of most recent piece
+    li $t0 46  
+    sw $t0 4($sp)  # Char "."
+    sw $0 8($sp)  # turn_num
+    jal set_slot
+    addi $sp $sp 12
+    
+    beq $v0 -1 errorUndoPiece
+    move $v0 $s6  # Char of most recent piece
+    move $v1 $s7  # Turn_num of most recent piece
+    j returnUndoPiece
+    
+    errorUndoPiece:
+    li $v0 46
+    li $v1 -1 
+    
+    returnUndoPiece:
+	lw $ra 0($sp)
+	lw $s0 4($sp)
+	lw $s1 8($sp)
+	lw $s2 12($sp)
+	lw $s3 16($sp)
+	lw $s4 20($sp)
+	lw $s5 24($sp)
+	lw $s6 28($sp)
+	lw $s7 32($sp)
+	addi $sp $sp 36
     jr $ra
 
 check_winner:
