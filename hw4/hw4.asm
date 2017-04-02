@@ -56,8 +56,8 @@ set_slot:
     mul $t5 $t0 $t3  # object_size * j
     add $t4 $t4 $t5  # (row_size * i) + (size_of(obj) * j)
     add $t4 $a0 $t4  # obj_arr[i][j]
-    sb $t1 0($t4)  # Store character in obj_arr[i][j] in upper byte
-    sb $t2 1($t4)  # Store turn_num in lower byte 
+    sb $t1 1($t4)  # Store character in obj_arr[i][j] in upper byte
+    sb $t2 0($t4)  # Store turn_num in lower byte 
 	
 	# Set Slot Successful
     li $v0 0
@@ -102,8 +102,8 @@ get_slot:
     mul $t5 $t0 $t3  # object_size * j
     add $t4 $t4 $t5  # (row_size * i) + (size_of(obj) * j)
     add $t4 $a0 $t4  # obj_arr[i][j]
-    lb $v0 0($t4)  # Load upper byte
-    lbu $v1 1($t4)  # Load lower byte
+    lb $v0 1($t4)  # Load upper byte
+    lbu $v1 0($t4)  # Load lower byte
     
     getSlotReturn:
     jr $ra
@@ -469,12 +469,90 @@ save_board:
 	addi $sp $sp 28
     jr $ra
 
+# $a0 = board array; $a1 = num_rows; $a2 = num_cols
+# return: byte vector
 validate_board:
-    # Define your code here
-    ###########################################
-    # DELETE THIS CODE.
-    li $v0, -200
-    ##########################################
+    # Save return address and s registers
+	addi $sp $sp -28
+	sw $ra 0($sp)
+	sw $s0 4($sp)
+	sw $s1 8($sp)
+	sw $s2 12($sp)
+	sw $s3 16($sp)
+	sw $s4 20($sp)
+	sw $s5 24($sp)
+	# Preserve board array through function calls
+	move $s0 $a0
+	li $s1 0  # Will contain the byte vector
+	move $s6 $a1  # Copy num_rows
+	
+	li $t0 4
+	# Bit 0: num_rows < 4
+	bge $a1 $t0 bitZeroDone
+	addi $s0 $s0 1  # else bit zero is 1
+	bitZeroDone:
+	# Bit 1: num_cols < 4
+	bge $a2 $t0 bitOneDone
+	addi $s0 $s0 2  # else bit one is 1
+	bitOneDone:
+	# Bit 2: num_rows * num_cols > 255
+	mul $t0 $a1 $a2
+	li $t1 255
+	ble $t0 $t1 bitTwoDone
+	addi $s0 $s0 4  # else bit two is 1
+	bitTwoDone:
+	
+	li $s2 0  # Counter for number of red pieces
+	li $s3 0  # Counter for number of yellow pieces
+	li $s4 2  # Lowest turn number
+	li $s5 0  # Highest turn number
+	li $s7 0  # Boolean check for bit 5
+	#li $s7 0  # Red turn_num % 2
+	#addi $sp $sp -4
+	#li $t0 0
+	#sw $t0 0($sp)  # Yellow turn_num % 2
+			
+	addi $s4 $a2 -1  # Rightmost col is col num_col - 1
+	valBoardColLoop:
+		bltz $s4 boardVal  # If the current col is less than zero, the board has been traversed
+		addi $s5 $s6 -1  # Top row is row num_row - 1
+		valBoardRowLoop:
+			bge $s5 $s2 valBoardNextCol  # If current column is equal or greater than the num_cols, move to next row
+			# Load arguments for get_slot
+			move $a0 $s0  # Load board array
+			move $a1 $s1  # Load num_rows
+			move $a2 $s2  # Load num_cols
+			move $a3 $s5  # Load current row
+			addi $sp $sp -4
+			sw $s4 0($sp)  # Load current col
+			jal get_slot
+			addi $sp $sp 4
+			
+			beq $v0 46 notGamePiece  # If char is "."
+			bne $v0 82 notRed
+			addi $s2 $s2 1  # Increment red counter
+			notRed:
+			addi $s3 $s3 1  # Increment yellow counter
+			
+			notGamePiece:
+			
+			
+			addi $s5 $s5 -1  # Decrement rows
+			j valBoardRowLoop
+		valBoardNextCol:
+		addi $s4 $s4 -1  # Decrement cols
+		j valBoardRowLoop
+		
+	boardVal:
+	addi $sp $sp 4
+	lw $ra 0($sp)
+	lw $s0 4($sp)
+	lw $s1 8($sp)
+	lw $s2 12($sp)
+	lw $s3 16($sp)
+	lw $s4 20($sp)
+	lw $s5 24($sp)
+	addi $sp $sp -28
     jr $ra
 
 ##############################
@@ -514,7 +592,7 @@ display_board:
 		li $s5 0  # Current column
 		displayBoardColLoop:
 			bge $s5 $s2 displayBoardNextRow  # If current column is equal or greater than the num_cols, move to next row
-			# Load arguments for set_slot
+			# Load arguments for get_slot
 			move $a0 $s0  # Load board array
 			move $a1 $s1  # Load num_rows
 			move $a2 $s2  # Load num_cols
@@ -536,7 +614,7 @@ display_board:
 		j displayBoardRowLoop
 	
 	boardDisplayed:
-	li $v0 0
+	li $v0 0 
 	
 	returnDisplayBoard:
     # Return s registers to their original values
@@ -550,12 +628,82 @@ display_board:
 	addi $sp $sp 28
     jr $ra
 
+# $a0 = board; $a1 = num_rows; $a2 = num_cols; $a3 = col; $a4 = char; $a5 = turn_num
+# Return 0 for success, -1 otherwise
 drop_piece:
-    # Define your code here
-    ###########################################
-    # DELETE THIS CODE.
-    li $v0, -200
-    ##########################################
+	lw $t0 0($sp)  # char
+	lw $t1 4($sp)  # turn_num
+	addi $sp $sp -32
+	sw $ra 0($sp)
+	sw $s0 4($sp)
+	sw $s1 8($sp)
+	sw $s2 12($sp)
+	sw $s3 16($sp)
+	sw $s4 20($sp)
+	sw $s5 24($sp)
+	sw $s6 28($sp)
+	# Move arguments into s registers
+	move $s0 $a0  # board array
+	move $s1 $a1  # num_rows
+	move $s2 $a2  # num_cols
+	move $s3 $a3  # col
+	move $s4 $t0  # char
+	move $s5 $t1  # turn_num
+	li $s6 0  # Current row in col $a3
+	
+	# Error checks
+	blez $s1 errorDropPiece  # num_rows < 0
+	blez $s2 errorDropPiece  # num_cols < 0
+	blez $s3 errorDropPiece  # cols < 0
+	bge $s3 $s2 errorDropPiece # cols >= num_cols
+	bgt $s5 255 errorDropPiece  # turn_num > 255
+	beq $s4 82 columnCheck  # char is "R"
+	beq $s4 89 columnCheck  # char is "Y"
+	j errorDropPiece
+	
+	columnCheck:
+		bge $s6 $s1 errorDropPiece  # If col = num_cols, there is no available space
+		move $a0 $s0  # Load board array
+		move $a1 $s1  # Load num_rows
+		move $a2 $s2  # Load num_cols
+		move $a3 $s6  # Load current row
+		addi $sp $sp -4
+		sw $s3 0($sp)  # Load current col
+		jal get_slot
+		addi $sp $sp 4
+		bne $v0 46 spaceOccupied  # If char is "."
+		move $a0 $s0  # Load board array
+		move $a1 $s1  # Load num_rows
+		move $a2 $s2  # Load num_cols
+		move $a3 $s6  # Load current row
+		addi $sp $sp -12
+		sw $s3 0($sp)  # Load current col
+		sw $s4 4($sp)  # Load char
+		sw $s5 8($sp)  # Load turn_num
+		jal set_slot
+		addi $sp $sp 12
+		j successDropPiece
+		spaceOccupied:
+		addi $s6 $s6 1  # Increment current row
+		j columnCheck
+	
+	successDropPiece:
+	li $v0 0
+	j returnDropPiece
+	
+	errorDropPiece:
+	li $v0 -1
+	
+	returnDropPiece:
+	lw $ra 0($sp)
+	lw $s0 4($sp)
+	lw $s1 8($sp)
+	lw $s2 12($sp)
+	lw $s3 16($sp)
+	lw $s4 20($sp)
+	lw $s5 24($sp)
+	lw $s6 28($sp)
+	addi $sp $sp 32
     jr $ra
 
 undo_piece:
@@ -588,8 +736,3 @@ check_diagonal_winner:
     ##########################################
     jr $ra
 
-
-
-##############################################################
-# DO NOT DECLARE A .DATA SECTION IN YOUR HW. IT IS NOT NEEDED
-##############################################################

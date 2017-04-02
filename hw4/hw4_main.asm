@@ -27,6 +27,10 @@ load_board_fileName: .asciiz "save_board.txt"
 save_board_msg: .asciiz "##### Testing save_board #####"
 save_board_fileName: .asciiz "save_board.txt"
 
+drop_piece_msg: .asciiz "##### Testing drop_piece #####"
+drop_piece_col: .word 4
+drop_piece_turn: .word 1
+
 display_board_msg: .asciiz "##### Testing display_board #####"
 
 ##################################################################
@@ -159,7 +163,7 @@ main:
     lw $a1 num_rows
     lw $a2 num_cols
     la $a3 load_board_fileName
-    jal save_board
+    #jal save_board
     move $a0, $v0
     li $v0, PRINT_INT
     syscall
@@ -194,6 +198,47 @@ main:
     li $v0, PRINT_STRING
     syscall
     
+    ##########################
+    # drop_piece
+    ##########################
+    la $a0, drop_piece_msg
+    li $v0, PRINT_STRING
+    syscall
+    la $a0, newline
+    li $v0, PRINT_STRING
+    syscall
+    la $a0 boardArray
+    lw $a1 num_rows
+    lw $a2 num_cols
+    lw $a3 drop_piece_col
+    addi $sp $sp -8
+ 	lw $t0 set_slot_charOne
+ 	sw $t0 0($sp)
+ 	lw $t0 drop_piece_turn
+ 	sw $t0 4($sp)
+    jal drop_piece
+   	move $a0, $v0
+    li $v0, PRINT_INT
+    syscall
+    li $a0 32
+    li $v0 PRINT_CHAR
+    syscall
+    la $a0 boardArray
+    lw $a1 num_rows
+    lw $a2 num_cols
+    lw $a3 drop_piece_col
+ 	lw $t0 set_slot_charTwo
+ 	sw $t0 0($sp)
+ 	lw $t0 drop_piece_turn
+ 	sw $t0 4($sp)
+    jal drop_piece
+   	addi $sp $sp 8
+   	move $a0, $v0
+    li $v0, PRINT_INT
+    syscall
+    la $a0, newline
+    li $v0, PRINT_STRING
+    syscall
     
     ##########################
     # display_board
