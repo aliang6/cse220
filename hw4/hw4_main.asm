@@ -35,6 +35,8 @@ display_board_msg: .asciiz "##### Testing display_board #####"
 
 undo_piece_msg: .asciiz "##### Testing undo_piece #####"
 
+check_winner_msg: .asciiz "##### Testing check_winner #####"
+
 ##################################################################
 # Constants
 .eqv QUIT 10
@@ -212,9 +214,9 @@ main:
     la $a0 boardArray
     lw $a1 num_rows
     lw $a2 num_cols
-    lw $a3 drop_piece_col
+    li $a3 5
     addi $sp $sp -8
- 	lw $t0 set_slot_charOne
+ 	lw $t0 set_slot_charTwo
  	sw $t0 0($sp)
  	lw $t0 drop_piece_turn
  	sw $t0 4($sp)
@@ -228,7 +230,7 @@ main:
     la $a0 boardArray
     lw $a1 num_rows
     lw $a2 num_cols
-    lw $a3 drop_piece_col
+    li $a3 5
  	lw $t0 set_slot_charTwo
  	sw $t0 0($sp)
  	lw $t0 drop_piece_turn
@@ -244,7 +246,22 @@ main:
     la $a0 boardArray
     lw $a1 num_rows
     lw $a2 num_cols
-    lw $a3 drop_piece_col
+    li $a3 5
+ 	lw $t0 set_slot_charTwo
+ 	sw $t0 0($sp)
+ 	lw $t0 drop_piece_turn
+ 	sw $t0 4($sp)
+    jal drop_piece
+   	move $a0, $v0
+    li $v0, PRINT_INT
+    syscall
+	li $a0 32
+    li $v0 PRINT_CHAR
+    syscall
+    la $a0 boardArray
+    lw $a1 num_rows
+    lw $a2 num_cols
+    li $a3 5
  	lw $t0 set_slot_charTwo
  	sw $t0 0($sp)
  	lw $t0 drop_piece_turn
@@ -257,6 +274,7 @@ main:
     la $a0, newline
     li $v0, PRINT_STRING
     syscall
+    addi $sp $sp 8
     
     ##########################
     # display_board
@@ -270,7 +288,7 @@ main:
     la $a0 boardArray
     lw $a1 num_rows
     lw $a2 num_cols
-    jal display_board
+    #jal display_board
     # print return value
     move $a0, $v0
     li $v0, PRINT_INT
@@ -317,10 +335,31 @@ main:
     la $a0 boardArray
     lw $a1 num_rows
     lw $a2 num_cols
-    jal display_board
+    #jal display_board
     # print return value
     move $a0, $v0
     li $v0, PRINT_INT
+    syscall
+    la $a0, newline
+    li $v0, PRINT_STRING
+    syscall
+    
+    ##########################
+    # check_winner
+    ##########################
+    la $a0, check_winner_msg
+    li $v0, PRINT_STRING
+    syscall
+    la $a0, newline
+    li $v0, PRINT_STRING
+    syscall
+    la $a0 boardArray
+    lw $a1 num_rows
+    lw $a2 num_cols
+    jal check_winner
+    # print return value
+    move $a0, $v0
+    li $v0, PRINT_CHAR
     syscall
     la $a0, newline
     li $v0, PRINT_STRING
