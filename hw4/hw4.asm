@@ -824,7 +824,7 @@ check_winner:
 	li $s6 0  # Char 
 	
 	hWinnerRowLoop:
-		bge $s3 $s2 hSearchCompleted  # If current row >= num_rows search complete
+		bge $s3 $s1 hSearchCompleted  # If current row >= num_rows search complete
 		li $s4 0  # Current column
 		addi $s5 $s4 3  # Current column + 3
 		hWinnerColLoop:
@@ -981,10 +981,184 @@ check_winner:
 
 
 check_diagonal_winner:
-    # Define your code here
-    ###########################################
-    # DELETE THIS CODE.
-    li $v0, -200
-    ##########################################
+    # Preserve return address and s registers
+	addi $sp $sp -36
+	sw $ra 0($sp)
+	sw $s0 4($sp)
+	sw $s1 8($sp)
+	sw $s2 12($sp)
+	sw $s3 16($sp)
+	sw $s4 20($sp)
+	sw $s5 24($sp)
+	sw $s6 28($sp)
+	sw $s7 32($sp)
+	# Preserve arguments
+	move $s0 $a0  # Board array
+	move $s1 $a1  # num_rows
+	move $s2 $a2  # num_cols
+	
+	# Checking for right diagonal winner e.g. bottom left to top right
+	li $s3 0  # Current row
+	li $s4 0  # Current column
+	addi $s5 $s4 3  # Current column + 3; represents the column of the other end of the diagonal
+	addi $s7 $s3 3  # Current row + 3; represents the row of the other end of the diagonal
+	li $s6 0  # Char 
+	
+	rdWinnerRowLoop:
+		bge $s7 $s1 rdSearchCompleted  # If current row >= num_rows search complete
+		li $s4 0  # Current column
+		addi $s5 $s4 3  # Current column + 3
+		rdWinnerColLoop:
+			bge $s5 $s2 rdWinnerNextRow  # If the column of the other end is equal to num_cols, move to next row
+			# Get_slot of current column and current row
+			move $a0 $s0  # Load board array
+			move $a1 $s1  # Load num_rows
+			move $a2 $s2  # Load num_cols
+			move $a3 $s3  # Load current row
+			addi $sp $sp -4
+			sw $s4 0($sp)  # Load current col
+			jal get_slot
+			addi $sp $sp 4
+			beq $v0 46 rdWinnerNextCol  # If the character is ".", next column
+			move $s6 $v0  # Move char to $s6
+			
+			# Get_slot of current column + 3 and current row + 3 
+			move $a0 $s0  # Load board array
+			move $a1 $s1  # Load num_rows
+			move $a2 $s2  # Load num_cols
+			move $a3 $s7  # Load current row + 3
+			addi $sp $sp -4
+			sw $s5 0($sp)  # Load current col + 3
+			jal get_slot
+			addi $sp $sp 4
+			bne $s6 $v0 rdWinnerNextCol  # If the char doesn't match, next column
+			
+			# Get_slot of current column + 1 and current row + 1 
+			move $a0 $s0  # Load board array
+			move $a1 $s1  # Load num_rows
+			move $a2 $s2  # Load num_cols
+			addi $a3 $s3 1  # Load current row + 1
+			addi $sp $sp -4
+			addi $t0 $s4 1
+			sw $t0 0($sp)  # Load current col + 1
+			jal get_slot
+			addi $sp $sp 4
+			bne $s6 $v0 rdWinnerNextCol  # If the char doesn't match, next column
+			
+			# Get_slot of current column + 2 and current row + 2
+			move $a0 $s0  # Load board array
+			move $a1 $s1  # Load num_rows
+			move $a2 $s2  # Load num_cols
+			addi $a3 $s3 2  # Load current row + 2
+			addi $sp $sp -4
+			addi $t0 $s4 2
+			sw $t0 0($sp)  # Load current col + 2
+			jal get_slot
+			addi $sp $sp 4
+			bne $s6 $v0 rdWinnerNextCol  # If the char doesn't match, next column
+			
+			# Else, winner found
+			# $v0 already contains the character
+			j returnCheckDiagWinner
+			
+			rdWinnerNextCol:
+			addi $s4 $s4 1  # Increment current column
+			addi $s5 $s5 1  # Increment current column + 3
+			j rdWinnerColLoop
+		rdWinnerNextRow:
+		addi $s3 $s3 1  # Increment current row
+		addi $s7 $s7 1  # Increment current row + 3
+		j rdWinnerRowLoop
+	
+	rdSearchCompleted:
+	
+	# Checking for left diagonal i.e. top left to bottom right
+	addi $s3 $s1 -1  # Current row
+	li $s4 0  # Current column
+	addi $s5 $s3 -3  # Current row - 3; represents row of other end of diagonal
+	addi $s7 $s4 3  # Current column + 3; represents column of other end of diagonal
+	li $s6 0  # Char 
+	
+	ldWinnerColLoop:
+		bge $s7 $s2 noDiagWinner  # If current col + 3 >= num_cols, there are currently no winner
+		addi $s3 $s1 -1  # Current row
+		addi $s5 $s3 -3  # Current row - 3
+		ldWinnerRowLoop:
+			blez $s5 ldWinnerNextCol  # If the row of the other end of the diagonal <= 0, move to next column
+			# Get_slot of current row and current column
+			move $a0 $s0  # Load board array
+			move $a1 $s1  # Load num_rows
+			move $a2 $s2  # Load num_cols
+			move $a3 $s3  # Load current row
+			addi $sp $sp -4
+			sw $s4 0($sp)  # Load current col
+			jal get_slot
+			addi $sp $sp 4
+			beq $v0 46 ldWinnerNextRow  # If the character is ".", next row
+			move $s6 $v0  # Move char to $s6
+			
+			# Get_slot of current row - 3 and current column + 3 
+			move $a0 $s0  # Load board array
+			move $a1 $s1  # Load num_rows
+			move $a2 $s2  # Load num_cols
+			move $a3 $s5  # Load current row - 3
+			addi $sp $sp -4
+			sw $s7 0($sp)  # Load current column + 3
+			jal get_slot
+			addi $sp $sp 4
+			bne $s6 $v0 ldWinnerNextRow  # If the char doesn't match, next row
+			
+			# Get_slot of current row - 1 and current column + 1
+			move $a0 $s0  # Load board array
+			move $a1 $s1  # Load num_rows
+			move $a2 $s2  # Load num_cols
+			addi $a3 $s3 -1  # Load current row - 1
+			addi $sp $sp -4
+			addi $t0 $s4 1
+			sw $t0 0($sp)  # Load current col - 1
+			jal get_slot
+			addi $sp $sp 4
+			bne $s6 $v0 ldWinnerNextRow  # If the char doesn't match, next row
+			
+			# Get_slot of current row - 2 and current column + 2
+			move $a0 $s0  # Load board array
+			move $a1 $s1  # Load num_rows
+			move $a2 $s2  # Load num_cols
+			addi $a3 $s3 -2  # Load current row - 2
+			addi $sp $sp -4
+			addi $t0 $s4 2 
+			sw $t0 0($sp)  # Load current col + 2
+			jal get_slot
+			addi $sp $sp 4
+			bne $s6 $v0 ldWinnerNextRow  # If the char doesn't match, next row
+			
+			# Else, winner found
+			# $v0 already contains the character
+			j returnCheckDiagWinner
+			
+			ldWinnerNextRow:
+			addi $s3 $s3 -1  # Decrement current row
+			addi $s5 $s5 -1  # Decrement current row + 3
+			j ldWinnerRowLoop
+		ldWinnerNextCol:
+		addi $s4 $s4 1  # Increment current column
+		addi $s7 $s7 1  # Increment current column + 3
+		j ldWinnerColLoop
+	
+	noDiagWinner:
+	li $v0 46  # Load char "."
+
+    returnCheckDiagWinner:
+	lw $ra 0($sp)
+	lw $s0 4($sp)
+	lw $s1 8($sp)
+	lw $s2 12($sp)
+	lw $s3 16($sp)
+	lw $s4 20($sp)
+	lw $s5 24($sp)
+	lw $s6 28($sp)
+	lw $s7 32($sp)
+	addi $sp $sp 36
     jr $ra
+
 

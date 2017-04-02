@@ -37,6 +37,8 @@ undo_piece_msg: .asciiz "##### Testing undo_piece #####"
 
 check_winner_msg: .asciiz "##### Testing check_winner #####"
 
+check_diagonal_winner_msg: .asciiz "##### Testing check_diagonal_winner #####"
+
 ##################################################################
 # Constants
 .eqv QUIT 10
@@ -262,7 +264,7 @@ main:
     lw $a1 num_rows
     lw $a2 num_cols
     li $a3 5
- 	lw $t0 set_slot_charTwo
+ 	lw $t0 set_slot_charOne
  	sw $t0 0($sp)
  	lw $t0 drop_piece_turn
  	sw $t0 4($sp)
@@ -364,10 +366,94 @@ main:
     la $a0, newline
     li $v0, PRINT_STRING
     syscall
+
+	##########################
+    # check_diagonal_winner
+    ##########################
+    la $a0, check_diagonal_winner_msg
+    li $v0, PRINT_STRING
+    syscall
+    la $a0, newline
+    li $v0, PRINT_STRING
+    syscall	
+	la $a0 boardArray
+    lw $a1 num_rows
+    lw $a2 num_cols
+    li $a3 9
+    addi $sp $sp -12
+ 	li $t0 1
+ 	sw $t0 0($sp)
+ 	lw $t0 set_slot_charOne
+ 	sw $t0 4($sp)
+ 	li $t0 11
+ 	sw $t0 8($sp)
+    jal set_slot
+    addi $sp $sp 12
+    la $a0 boardArray
+    lw $a1 num_rows
+    lw $a2 num_cols
+    li $a3 8
+    addi $sp $sp -12
+ 	li $t0 2
+ 	sw $t0 0($sp)
+ 	lw $t0 set_slot_charOne
+ 	sw $t0 4($sp)
+ 	li $t0 12
+ 	sw $t0 8($sp)
+    jal set_slot
+    addi $sp $sp 12
+    la $a0 boardArray
+    lw $a1 num_rows
+    lw $a2 num_cols
+    li $a3 7
+    addi $sp $sp -12
+ 	li $t0 3
+ 	sw $t0 0($sp)
+ 	lw $t0 set_slot_charTwo
+ 	sw $t0 4($sp)
+ 	li $t0 13
+ 	sw $t0 8($sp)
+    jal set_slot
+    addi $sp $sp 12
+    la $a0 boardArray
+    lw $a1 num_rows
+    lw $a2 num_cols
+    li $a3 6
+    addi $sp $sp -12
+ 	li $t0 4
+ 	sw $t0 0($sp)
+ 	lw $t0 set_slot_charOne
+ 	sw $t0 4($sp)
+ 	li $t0 14
+ 	sw $t0 8($sp)
+    jal set_slot
+    addi $sp $sp 12
+    la $a0, newline
+    li $v0, PRINT_STRING
+    syscall
+    la $a0 boardArray
+    lw $a1 num_rows
+    lw $a2 num_cols
+    jal display_board
+    la $a0 boardArray
+    lw $a1 num_rows
+    lw $a2 num_cols
+    jal check_diagonal_winner
+    # print return value
+    move $a0, $v0
+    li $v0, PRINT_CHAR
+    syscall
+    la $a0, newline
+    li $v0, PRINT_STRING
+    syscall
+    
+
     
     # Exit the program
     li	$v0, 10
     syscall
+    
+    
 
 ####################################################################
 # End of MAIN program
