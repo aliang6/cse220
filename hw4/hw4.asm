@@ -554,9 +554,9 @@ validate_board:
 	boardTravOne:
 	# Bit 3 check
 	li $t1 -1
-	blt $s2 $t1 bitThreeAdd  # If difference is less than -1
+	blt $s6 $t1 bitThreeAdd  # If difference is less than -1
 	li $t1 1
-	bgt $s2 $t1 bitThreeAdd  # If difference is greater than 1
+	bgt $s6 $t1 bitThreeAdd  # If difference is greater than 1
 	j bitThreeDone
 	
 	bitThreeAdd:
@@ -595,13 +595,13 @@ validate_board:
 	mfhi $s4
 	modTwoCheck:
 	
-	addi $sp $sp -4
 	addi $sp $sp -256  # Space to create a turn counter for every turn
+	addi $sp $sp -16  # Space for counters and boolean checks
 	li $t0 256
-	sb $t0 0($sp)  # Lowest turn_num in a column
-	sb $0 1($sp)  # Boolean check for lower turn piece above higher turn
-	sb $0 2($sp)  # Boolean check for empty slot below piece
-	sb $0 3($sp)  # Boolean check for red and yellow alternating turns
+	sw $t0 256($sp)  # Lowest turn_num in a column
+	sw $0 260($sp)  # Boolean check for lower turn piece above higher turn
+	sw $0 264($sp)  # Boolean check for empty slot below piece
+	sw $0 268($sp)  # Boolean check for red and yellow alternating turns
 	
 	addi $s6 $s3 -1  # Rightmost col is col num_col - 1
 	valBoardTwoColLoop:
@@ -609,7 +609,7 @@ validate_board:
 		bltz $s6 boardTravTwo  # If the current col is less than zero, the board has been traversed
 		addi $s7 $s2 -1 # Top row is row num_row - 1
 		li $t0 256
-		sb $t0 0($sp)
+		sw $t0 256($sp)
 		valBoardTwoRowLoop:
 			bltz $s7 valBoardTwoNextCol  # If current row is less than one, move to next column
 			# Load arguments for get_slot
@@ -626,16 +626,16 @@ validate_board:
 			beq $v0 46 notGamePieceTwo  # If char is "."
 			
 			# Illegal Piece Check
-			lb $t0 0($sp)
+			lw $t0 256($sp)
 			blt $v1 $t0 legalPiece
 			li $t0 1
-			sb $t0 1($sp)  # Else test failed
+			sw $t0 260($sp)  # Else test failed
 			legalPiece:
-			sb $v1 0($sp)  # Update lowest turn_num in column
+			sw $v1 256($sp)  # Update lowest turn_num in column
 			
 			# Increment turn counter
-			addi $t0 $v1 4
-			add $t0 $t0 $sp  # Amount of pieces that have specified turn
+			#addi $t0 $v1 1
+			add $t0 $v1 $sp  # Turn_num address
 			lb $t1 0($t0)  # Load value at that address
 			addi $t1 $t1 1  # Increment value
 			sb $t1 0($t0)  # Store new value
@@ -647,23 +647,22 @@ validate_board:
 			bne $v0 82 notRedTwo  # If not red piece, then yellow piece
 			beq $t0 $s4 modTwoChecked  # If yellow piece equals, then it passes the test
 			li $t0 1  
-			sb $t0 3($sp)  # Else it fails
+			sw $t0 268($sp)  # Else it fails
 			j modTwoChecked
 			notRedTwo:
 			bne $t0 $s4 modTwoChecked  # If red piece doesn't equal, then it passes the test
 			li $t0 1
-			sb $t0 3($sp)  # Else it fails
-			addi $s6 $s6 -1  # Decrement piece counter
-			
+			sw $t0 268($sp)  # Else it fails
 			modTwoChecked:
+			j legalSlot
 			
 			notGamePieceTwo:
 			
 			# Illegal slot check
-			lb $t0 0($sp)
+			lw $t0 256($sp)
 			beq $t0 256 legalSlot
 			li $t0 1
-			sb $t0 2($sp)  # Else test failed
+			sw $t0 264($sp)  # Else test failed
 			legalSlot:
 			
 			addi $s7 $s7 -1  # Decrement rows
@@ -674,30 +673,46 @@ validate_board:
 	boardTravTwo:
 	
 	# Bit 4 check
-	lb $t0 3($sp)
-	beq $t0 0 bitFourDone
+	lb $t0 268($sp)
+	beq $t0 0 bitFourLoop
 	addi $s1 $s1 16  # Else bit four is 1
+	move $t1 $s5  # Copy max turn_num found
+	j bitFourDone
+	bitFourLoop:
+		ble $t1 4 bitFourDone
+		add $t0 $sp $t1
+		lb $t0 0($t0)
+		bne $t0 0 turnNumExists  # If there's only one piece with the specified turn then it passes the test
+		addi $s1 $s1 16  # Else it fails and bit seven is 1
+		j bitFourDone
+		turnNumExists:
+		addi $t1 $t1 -1  # Decrement counter
+		j bitFourLoop
 	bitFourDone:
 	
 	# Bit 5 check
-	lb $t0 2($sp)
+	lw $t0 264($sp)
 	beq $t0 0 bitFiveDone
 	addi $s1 $s1 32  # Else bit five is 1
 	bitFiveDone:
 	
 	# Bit 6 check
-	lb $t0 1($sp)
+	lw $t0 260($sp)
 	beq $t0 0 bitSixDone
 	addi $s1 $s1 64  # Else bit six is 1
 	bitSixDone:
 	
 	# Bit 7 check
-	addi $s5 $s5 4  # Counter
+	# $s5 is the counter
+	lb $t0 1($sp)  # Load counter for number of pieces with turn 1
+	bnez $t0 bitSevenLoop  # If the counter isn't equal to zero, proceed to loop
+	addi $s1 $s1 128  # Else bit seven is 1
+	j bitSevenDone
 	bitSevenLoop:
-		ble $s5 4 bitSevenDone
+		blez $s5 bitSevenDone
 		add $t0 $sp $s5
 		lb $t0 0($t0)
-		beq $t0 1 turnNumPassed  # If there's only one piece with the specified turn then it passes the test
+		blt $t0 2 turnNumPassed  # If there's only one piece with the specified turn then it passes the test
 		addi $s1 $s1 128  # Else it fails and bit seven is 1
 		j bitSevenDone
 		turnNumPassed:
@@ -706,7 +721,7 @@ validate_board:
 	
 	bitSevenDone:
 	
-	addi $sp $sp 4
+	addi $sp $sp 16
 	addi $sp $sp 256
 	
 	boardValidated:
@@ -768,8 +783,8 @@ display_board:
 			sw $s5 0($sp)  # Load current col
 			jal get_slot
 			addi $sp $sp 4
-			move $a0 $v1  # Move char to $a0
-			li $v0 1  # Print character
+			move $a0 $v0  # Move char to $a0
+			li $v0 11  # Print character
 			syscall
 			addi $s5 $s5 1  # Increment columns
 			j displayBoardColLoop
