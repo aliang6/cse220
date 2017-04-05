@@ -484,67 +484,234 @@ validate_board:
 	# Preserve board array through function calls
 	move $s0 $a0
 	li $s1 0  # Will contain the byte vector
-	move $s6 $a1  # Copy num_rows
+	move $s2 $a1  # Copy num_rows
+	move $s3 $a2  # Copy num_cols
 	
 	li $t0 4
 	# Bit 0: num_rows < 4
 	bge $a1 $t0 bitZeroDone
-	addi $s0 $s0 1  # else bit zero is 1
+	addi $s1 $s1 1  # else bit zero is 1
 	bitZeroDone:
 	# Bit 1: num_cols < 4
 	bge $a2 $t0 bitOneDone
-	addi $s0 $s0 2  # else bit one is 1
+	addi $s1 $s1 2  # else bit one is 1
 	bitOneDone:
 	# Bit 2: num_rows * num_cols > 255
 	mul $t0 $a1 $a2
 	li $t1 255
 	ble $t0 $t1 bitTwoDone
-	addi $s0 $s0 4  # else bit two is 1
+	addi $s1 $s1 4  # else bit two is 1
 	bitTwoDone:
 	
-	li $s2 0  # Counter for number of red pieces
-	li $s3 0  # Counter for number of yellow pieces
-	li $s4 2  # Lowest turn number
-	li $s5 0  # Highest turn number
-	li $s7 0  # Boolean check for bit 5
-	#li $s7 0  # Red turn_num % 2
-	#addi $sp $sp -4
-	#li $t0 0
-	#sw $t0 0($sp)  # Yellow turn_num % 2
-			
-	addi $s4 $a2 -1  # Rightmost col is col num_col - 1
+	li $s6 0  # Difference of pieces on board
+	li $s4 0  # Column and row of most recent piece in the form col*100 + row
+	addi $sp $sp -4  # Increment stack pointer
+	li $t0 0
+	sw $t0 0($sp)  # Highest turn number
+	# $s6 is num_rows
+	
+	addi $s5 $s3 -1  # Rightmost col is col num_col - 1
 	valBoardColLoop:
-		bltz $s4 boardVal  # If the current col is less than zero, the board has been traversed
-		addi $s5 $s6 -1  # Top row is row num_row - 1
+		
+		bltz $s5 boardTravOne  # If the current col is less than zero, the board has been traversed
+		addi $s7 $s2 -1 # Top row is row num_row - 1
 		valBoardRowLoop:
-			bge $s5 $s2 valBoardNextCol  # If current column is equal or greater than the num_cols, move to next row
+			bltz $s7 valBoardNextCol  # If current row is less than one, move to next column
 			# Load arguments for get_slot
 			move $a0 $s0  # Load board array
-			move $a1 $s1  # Load num_rows
-			move $a2 $s2  # Load num_cols
-			move $a3 $s5  # Load current row
+			move $a1 $s2  # Load num_rows
+			move $a2 $s3  # Load num_cols
+			move $a3 $s7  # Load current row
 			addi $sp $sp -4
-			sw $s4 0($sp)  # Load current col
-			jal get_slot
-			addi $sp $sp 4
+			sw $s5 0($sp)  # Load current col
+			jal get_slot  
+			addi $sp $sp 4  
 			
 			beq $v0 46 notGamePiece  # If char is "."
 			bne $v0 82 notRed
-			addi $s2 $s2 1  # Increment red counter
+			addi $s6 $s6 1  # Increment piece counter
+			j pieceCounterIncremented
 			notRed:
-			addi $s3 $s3 1  # Increment yellow counter
+			addi $s6 $s6 -1  # Decrement piece counter
 			
+			pieceCounterIncremented:
+			lw $t0 0($sp)  # Load highest turn number
+			ble $v1 $t0 notHighestTurn  # If turn_num is less than or equal to the current highest turn_num, it's not the highest
+			sw $v1 0($sp)  # else it is
+			li $t1 100
+			move $s4 $s5  # Reset column row value
+			mul $s4 $s4 $t1  # Multiply column of most recent piece by 100
+			add $s4 $s4 $s7  # Column * 100 + row
+			notHighestTurn:
 			notGamePiece:
 			
-			
-			addi $s5 $s5 -1  # Decrement rows
+			addi $s7 $s7 -1  # Decrement rows
 			j valBoardRowLoop
 		valBoardNextCol:
-		addi $s4 $s4 -1  # Decrement cols
-		j valBoardRowLoop
+		addi $s5 $s5 -1  # Decrement cols
+		j valBoardColLoop
 		
-	boardVal:
+	boardTravOne:
+	# Bit 3 check
+	li $t1 -1
+	blt $s2 $t1 bitThreeAdd  # If difference is less than -1
+	li $t1 1
+	bgt $s2 $t1 bitThreeAdd  # If difference is greater than 1
+	j bitThreeDone
+	
+	bitThreeAdd:
+	addi $s1 $s1 8  # bit three is 1
+	
+	bitThreeDone:
+	lw $s5 0($sp)  # Contains highest turn_num
 	addi $sp $sp 4
+	blez $s5 boardValidated  # If the highest turn_num is less than or equal to zero, then there are no pieces 
+							 # on the board and the byte vector can be returned
+	
+	# Get the char value of the piece with the highest turn num
+	# Will use it to figure out whether that piece's turn_num % 2 is equal to 1 or 0
+	move $a0 $s0  # Load board array
+	move $a1 $s2  # Load num_rows
+	move $a2 $s3  # Load num_cols
+	li $t0 100
+	div $s4 $t0  # Quotient = column; Remainder = row
+	mfhi $a3
+	addi $sp $sp -4
+	mflo $t0  
+	sw $t0 0($sp)  # Load current col
+	jal get_slot  
+	addi $sp $sp 4  
+	
+	# $s0 = board array; $s1 = byte vector; $s2 = num_rows; $s3 = num_cols; $s5 = highest turn_num
+	# $s4 will contain the value of an Y piece's turn_num modded by 2
+	li $t0 2
+	bne $v0 82 notRPiece # If the character is not "R", then it must be "Y"
+	div $v1 $t0
+	mfhi $s4 
+	j modTwoCheck
+	notRPiece:
+	addi $v1 $v1 1 
+	div $v1 $t0 
+	mfhi $s4
+	modTwoCheck:
+	
+	addi $sp $sp -4
+	addi $sp $sp -256  # Space to create a turn counter for every turn
+	li $t0 256
+	sb $t0 0($sp)  # Lowest turn_num in a column
+	sb $0 1($sp)  # Boolean check for lower turn piece above higher turn
+	sb $0 2($sp)  # Boolean check for empty slot below piece
+	sb $0 3($sp)  # Boolean check for red and yellow alternating turns
+	
+	addi $s6 $s3 -1  # Rightmost col is col num_col - 1
+	valBoardTwoColLoop:
+		
+		bltz $s6 boardTravTwo  # If the current col is less than zero, the board has been traversed
+		addi $s7 $s2 -1 # Top row is row num_row - 1
+		li $t0 256
+		sb $t0 0($sp)
+		valBoardTwoRowLoop:
+			bltz $s7 valBoardTwoNextCol  # If current row is less than one, move to next column
+			# Load arguments for get_slot
+			move $a0 $s0  # Load board array
+			move $a1 $s2  # Load num_rows
+			move $a2 $s3  # Load num_cols
+			move $a3 $s7  # Load current row
+			addi $sp $sp -4
+			sw $s6 0($sp)  # Load current col
+			jal get_slot  
+			addi $sp $sp 4  
+			
+			
+			beq $v0 46 notGamePieceTwo  # If char is "."
+			
+			# Illegal Piece Check
+			lb $t0 0($sp)
+			blt $v1 $t0 legalPiece
+			li $t0 1
+			sb $t0 1($sp)  # Else test failed
+			legalPiece:
+			sb $v1 0($sp)  # Update lowest turn_num in column
+			
+			# Increment turn counter
+			addi $t0 $v1 4
+			add $t0 $t0 $sp  # Amount of pieces that have specified turn
+			lb $t1 0($t0)  # Load value at that address
+			addi $t1 $t1 1  # Increment value
+			sb $t1 0($t0)  # Store new value
+			
+			# Alternating pieces check
+			li $t0 2
+			div $v1 $t0
+			mfhi $t0 # Contains piece turn_num modded by two
+			bne $v0 82 notRedTwo  # If not red piece, then yellow piece
+			beq $t0 $s4 modTwoChecked  # If yellow piece equals, then it passes the test
+			li $t0 1  
+			sb $t0 3($sp)  # Else it fails
+			j modTwoChecked
+			notRedTwo:
+			bne $t0 $s4 modTwoChecked  # If red piece doesn't equal, then it passes the test
+			li $t0 1
+			sb $t0 3($sp)  # Else it fails
+			addi $s6 $s6 -1  # Decrement piece counter
+			
+			modTwoChecked:
+			
+			notGamePieceTwo:
+			
+			# Illegal slot check
+			lb $t0 0($sp)
+			beq $t0 256 legalSlot
+			li $t0 1
+			sb $t0 2($sp)  # Else test failed
+			legalSlot:
+			
+			addi $s7 $s7 -1  # Decrement rows
+			j valBoardTwoRowLoop
+		valBoardTwoNextCol:
+		addi $s6 $s6 -1  # Decrement cols
+		j valBoardTwoColLoop
+	boardTravTwo:
+	
+	# Bit 4 check
+	lb $t0 3($sp)
+	beq $t0 0 bitFourDone
+	addi $s1 $s1 16  # Else bit four is 1
+	bitFourDone:
+	
+	# Bit 5 check
+	lb $t0 2($sp)
+	beq $t0 0 bitFiveDone
+	addi $s1 $s1 32  # Else bit five is 1
+	bitFiveDone:
+	
+	# Bit 6 check
+	lb $t0 1($sp)
+	beq $t0 0 bitSixDone
+	addi $s1 $s1 64  # Else bit six is 1
+	bitSixDone:
+	
+	# Bit 7 check
+	addi $s5 $s5 4  # Counter
+	bitSevenLoop:
+		ble $s5 4 bitSevenDone
+		add $t0 $sp $s5
+		lb $t0 0($t0)
+		beq $t0 1 turnNumPassed  # If there's only one piece with the specified turn then it passes the test
+		addi $s1 $s1 128  # Else it fails and bit seven is 1
+		j bitSevenDone
+		turnNumPassed:
+		addi $s5 $s5 -1  # Decrement counter
+		j bitSevenLoop
+	
+	bitSevenDone:
+	
+	addi $sp $sp 4
+	addi $sp $sp 256
+	
+	boardValidated:
+	move $v0 $s1
+
 	lw $ra 0($sp)
 	lw $s0 4($sp)
 	lw $s1 8($sp)
@@ -601,8 +768,8 @@ display_board:
 			sw $s5 0($sp)  # Load current col
 			jal get_slot
 			addi $sp $sp 4
-			move $a0 $v0  # Move char to $a0
-			li $v0 11  # Print character
+			move $a0 $v1  # Move char to $a0
+			li $v0 1  # Print character
 			syscall
 			addi $s5 $s5 1  # Increment columns
 			j displayBoardColLoop

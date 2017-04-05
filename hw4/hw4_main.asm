@@ -33,6 +33,8 @@ drop_piece_turn: .word 1
 
 display_board_msg: .asciiz "##### Testing display_board #####"
 
+val_board_msg: .asciiz "##### Testing validate_board #####"
+
 undo_piece_msg: .asciiz "##### Testing undo_piece #####"
 
 check_winner_msg: .asciiz "##### Testing check_winner #####"
@@ -205,6 +207,50 @@ main:
     syscall
     
     ##########################
+    # display_board
+    ##########################
+    la $a0, display_board_msg
+    li $v0, PRINT_STRING
+    syscall
+    la $a0, newline
+    li $v0, PRINT_STRING
+    syscall
+    la $a0 boardArray
+    lw $a1 num_rows
+    lw $a2 num_cols
+    jal display_board
+    # print return value
+    move $a0, $v0
+    li $v0, PRINT_INT
+    syscall
+    la $a0, newline
+    li $v0, PRINT_STRING
+    syscall
+    
+    
+    ##########################
+    # validate_board
+    ##########################
+    la $a0, val_board_msg
+    li $v0, PRINT_STRING
+    syscall
+    la $a0, newline
+    li $v0, PRINT_STRING
+    syscall
+    la $a0 boardArray
+    lw $a1 num_rows
+    lw $a2 num_cols
+    jal validate_board
+    # print return value
+    move $a0, $v0
+    li $v0, PRINT_INT
+    syscall
+    la $a0, newline
+    li $v0, PRINT_STRING
+    syscall
+    
+    
+    ##########################
     # drop_piece
     ##########################
     la $a0, drop_piece_msg
@@ -220,7 +266,7 @@ main:
     addi $sp $sp -8
  	lw $t0 set_slot_charTwo
  	sw $t0 0($sp)
- 	lw $t0 drop_piece_turn
+ 	li $t0 5
  	sw $t0 4($sp)
     jal drop_piece
    	move $a0, $v0
@@ -235,7 +281,7 @@ main:
     li $a3 5
  	lw $t0 set_slot_charTwo
  	sw $t0 0($sp)
- 	lw $t0 drop_piece_turn
+ 	li $t0 6
  	sw $t0 4($sp)
     jal drop_piece
    	addi $sp $sp 8
@@ -279,9 +325,9 @@ main:
     addi $sp $sp 8
     
     ##########################
-    # display_board
+    # validate_board
     ##########################
-    la $a0, display_board_msg
+    la $a0, val_board_msg
     li $v0, PRINT_STRING
     syscall
     la $a0, newline
@@ -290,7 +336,7 @@ main:
     la $a0 boardArray
     lw $a1 num_rows
     lw $a2 num_cols
-    #jal display_board
+    jal validate_board
     # print return value
     move $a0, $v0
     li $v0, PRINT_INT
