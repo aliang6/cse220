@@ -5,8 +5,8 @@ newline:  .asciiz "\n"
 # Arguments for test cases.
 .align 2
 boardArray: .space 500
-num_rows: .word 4
-num_cols: .word 5
+num_rows: .word 10
+num_cols: .word 10
 
 set_slot_msg: .asciiz "##### Testing set_slot #####"
 set_slot_row: .word 9
@@ -281,7 +281,7 @@ main:
     li $a3 5
  	lw $t0 set_slot_charTwo
  	sw $t0 0($sp)
- 	li $t0 6
+ 	li $t0 7
  	sw $t0 4($sp)
     jal drop_piece
    	addi $sp $sp 8
@@ -323,6 +323,27 @@ main:
     li $v0, PRINT_STRING
     syscall
     addi $sp $sp 8
+    
+    ##########################
+    # display_board
+    ##########################
+    la $a0, display_board_msg
+    li $v0, PRINT_STRING
+    syscall
+    la $a0, newline
+    li $v0, PRINT_STRING
+    syscall
+    la $a0 boardArray
+    lw $a1 num_rows
+    lw $a2 num_cols
+    jal display_board
+    # print return value
+    move $a0, $v0
+    li $v0, PRINT_INT
+    syscall
+    la $a0, newline
+    li $v0, PRINT_STRING
+    syscall
     
     ##########################
     # validate_board

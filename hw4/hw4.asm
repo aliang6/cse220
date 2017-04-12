@@ -962,7 +962,7 @@ undo_piece:
     
     beq $v0 -1 errorUndoPiece
     move $v0 $s6  # Char of most recent piece
-    move $v1 $s7  # Turn_num of most recent piece
+    move $v1 $s5  # Turn_num of most recent piece
     j returnUndoPiece
     
     errorUndoPiece:
