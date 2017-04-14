@@ -29,8 +29,13 @@ match_glob:
 		
 	seqLengthFound:
 	
-	# Base Cases
-
+	matchGlobLoop:
+		addi $sp $sp 8
+		sw $ra 0($sp)
+		# Base Cases
+		
+		
+		
 	
 	lw $ra 0($sp)
 	lw $s0 4($sp)
@@ -40,37 +45,37 @@ match_glob:
 	addi $sp $sp 20
 	jr $ra
 
-# $a0 is the sequence array; $a1 is the starting destination address
+# $a0 is the destination address; $a1 is the sequence array
 save_perm:
-	li $t0 0  # Traversal counter for the sequence array
-	li $t1 0  # Traversal counter for the destination array
+	li $t0 0  # Traversal counter for the destination array
+	li $t1 0  # Traversal counter for the sequence array
 	savePermLoop:
-		beqz $t0 noHyphen  # No hyphen required for the zeroeth bit
+		beqz $t1 noHyphen  # No hyphen required for the zeroeth bit
 		li $t2 2
-		div $t0 $t2  # Divide counter of the sequence array by two
+		div $t1 $t2  # Divide counter of the sequence array by two
 		mfhi $t2
 		bnez $t2 noHyphen  # Check if the sequence array is even
-		add $t2 $t1 $a1
+		add $t2 $t0 $a0
 		li $t3 45  # Load '-' character
 		sb $t3 0($t2)
-		addi $t1 $t1 1  # Increment destination array character
+		addi $t0 $t0 1  # Increment destination array character
 
 		noHyphen:
-		add $t2 $a0 $t0
-		lb $t3 0($t2)  # Load byte at address
-		beqz $t3 savePermReturn  # Null terminator
 		add $t2 $a1 $t1
-		sb $t3 0($t2)  # Store byte at address
-		addi $t0 $t0 1  # Increment sequence array counter
-		addi $t1 $t1 1  # Increment destination array character
+		lb $t3 0($t2)  # Load byte at seq address
+		beqz $t3 savePermReturn  # Null terminator
+		add $t2 $a0 $t0
+		sb $t3 0($t2)  # Store byte at dst address
+		addi $t0 $t0 1  # Increment destination array character
+		addi $t1 $t1 1  # Increment sequence array counter
 		j savePermLoop
 		
 	savePermReturn:
-	add $t2 $a1 $t1
+	add $v0 $a0 $t0
+	addi $t0 $t0 -1
+	add $t2 $a0 $t0
 	li $t3 0
 	sb $t3 0($t2)  # Null terminator
-	addi $t1 $t1 1  
-	add $v0 $a1 $t1 # Address of byte after null terminator
 	jr $ra
 
 # a0 is the space to store the next character for the permutation; $a1 is the character array representing the 
@@ -89,21 +94,21 @@ construct_candidates:
 	bne $t0 65 constNotA
 		li $t0 84
 		sb $t0 0($a0)
-		j constructElseReturn
+		j constructReturn
 	constNotA:
 	bne $t0 84 constNotAT
 		li $t0 65
 		sb $t0 0($a0)
-		j constructElseReturn
+		j constructReturn
 	constNotAT:
 	bne $t0 67 constNotATC
 		li $t0 71
 		sb $t0 0($a0)
-		j constructElseReturn
+		j constructReturn
 	constNotATC:
 		li $t0 67
 		sb $t0 0($a0)
-		j constructElseReturn
+		j constructReturn
 	
 	candElse:
 		li $t0 65
@@ -123,9 +128,26 @@ construct_candidates:
 	constructElseReturn:
 	jr $ra
 	
+	
+# $a0 is the buffer character sequence of size length
+# $a1 is n; continue creating permutation on the nth character (seq[n-1])
+# $a2 is the pointer of the location to store the result when the premutation is complete (size == length)
+# $a3 is the length i.e. the total number of characters for each permutation
 permutations:
+	# Error checks
+	blez $a3 permutationError  # Length is less than or equal to zero
+	li $t0 2
+	div $a3 $t0
+	mfhi $t0
+	beq $t0 1 permutationError  # Length is odd
+	
+	# 
+
 	li $v0, -200
 	li $v1, -200
+	permutationError:
+	li $a0 -1
+	li $a1 0
 	jr $ra
 
 .data
