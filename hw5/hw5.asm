@@ -73,8 +73,54 @@ save_perm:
 	add $v0 $a1 $t1 # Address of byte after null terminator
 	jr $ra
 
+# a0 is the space to store the next character for the permutation; $a1 is the character array representing the 
+# current state of the permutation; $a2 is the number describing the location of the character to be filled in the
+# sequence array 
+# Return the number of candidates that are present; max 4
+# Note: $a1 is not necessarily null terminated 
 construct_candidates:
-	li $v0, -200
+	li $t0 2
+	div $a2 $t0
+	mfhi $t0  # Divide the location number by two
+	beqz $t0 candElse  # If location mod two is zero, branch to the else case
+	addi $a2 $a2 -1  # n - 1
+	add $t0 $a1 $a2
+	lb $t0 0($t0)  # Load byte at seq[n-1]
+	bne $t0 65 constNotA
+		li $t0 84
+		sb $t0 0($a0)
+		j constructElseReturn
+	constNotA:
+	bne $t0 84 constNotAT
+		li $t0 65
+		sb $t0 0($a0)
+		j constructElseReturn
+	constNotAT:
+	bne $t0 67 constNotATC
+		li $t0 71
+		sb $t0 0($a0)
+		j constructElseReturn
+	constNotATC:
+		li $t0 67
+		sb $t0 0($a0)
+		j constructElseReturn
+	
+	candElse:
+		li $t0 65
+		sb $t0 0($a0)  # Load 'A'
+		li $t0 67
+		sb $t0 1($a0)  # Load 'C'
+		li $t0 71
+		sb $t0 2($a0)  # Load 'G'
+		li $t0 84
+		sb $t0 3($a0)  # Load 'T'
+		li $v0 4
+		j constructElseReturn
+		
+	constructReturn:
+		li $v0 1
+		
+	constructElseReturn:
 	jr $ra
 	
 permutations:
