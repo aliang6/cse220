@@ -196,8 +196,8 @@ save_perm:
 	add $v0 $a0 $t0
 	addi $t0 $t0 -1
 	add $t2 $a0 $t0
-	li $t3 0
-	sb $t3 0($t2)  # Null terminator
+	li $t3 10
+	sb $t3 0($t2)  # New line character
 	jr $ra
 
 # a0 is the space to store the next character for the permutation; $a1 is the character array representing the 
@@ -256,15 +256,17 @@ construct_candidates:
 # $a2 is the pointer of the location to store the result when the permutation is complete (size == length)
 # $a3 is the length i.e. the total number of characters for each permutation
 permutations:
-	addi $sp $sp -20
+	addi $sp $sp -28
 	sw $ra 0($sp)
 	sw $a0 4($sp)
 	sw $a1 8($sp)
 	sw $a2 12($sp)
 	sw $a3 16($sp)
+	sw $s0 20($sp)
+	sw $s1 24($sp)
 	
-	# Base checks
-	# Error checks
+	# Base case checks
+
 	blez $a3 permutationError  # Length is less than or equal to zero
 	li $t0 2
 	div $a3 $t0
@@ -273,58 +275,67 @@ permutations:
 	j permNoErrors
 	permutationError:
 	lw $ra 0($sp)
-	addi $sp $sp 20
+	lw $s0 20($sp)
+	lw $s1 24($sp)
+	addi $sp $sp 28
 	li $v0 -1
 	li $v1 0
 	jr $ra
 	
 	permNoErrors:
 	# A Permutation of the final length has been reached. Save it to res.
-	bne $a1 $a3 permutationsElse  # n = length
+	bne $a1 $a3 permutationsElse  # If n == length
 	add $t0 $a0 $a3
 	addi $t0 $t0 1  # seq address + length + 1
 	sb $0 0($t0)  # Store null terminator
 	move $a1 $a0  # Sequence 
 	move $a0 $a2  # Res
 	jal save_perm
-	lw $ra 0($sp)
-	addi $sp $sp 20
 	move $v1 $v0  # Return next
 	li $v0 0  # Return 0 
+	lw $ra 0($sp)
+	lw $s0 20($sp)
+	lw $s1 24($sp)
+	addi $sp $sp 28
 	jr $ra
 	
 	
 	permutationsElse:
-	move $fp $sp
+	# move $fp $sp
 	addi $sp $sp -4  # Create space for candidates
-	move $a0 $fp  # candidates
-	lw $a1 0($fp)  # seq
-	lw $a2 4($fp)  # n
+	move $a0 $sp  # candidates
+	lw $a1 8($sp)  # seq
+	lw $a2 12($sp)  # n
 	jal construct_candidates
-	move $t0 $v0  # ncand
-	li $t1 0   # i counter
-	bge $t1 $t0 permForComplete  # For loop complete
-	lw $t2 0($fp)  # Load sequence
-	lw $t3 4($fp)  # Load n 
+	move $s1 $v0  # ncand
+	li $s0 0   # i counter
+	permForLoop:
+	bge $s0 $s1 permForComplete  # For loop complete
+	lw $t2 8($sp)  # Load beginning sequence address
+	lw $t3 12($sp)  # Load n 
 	add $t2 $t2 $t3  # seq[n]
-	lb $t3 0($sp)  # Load candidates
-	add $t3 $t3 $t1  # candidates[i]
+	move $t3 $sp  # Load candidates address
+	add $t3 $t3 $s0
+	lb $t3 0($t3)  # candidates[i]
 	sb $t3 0($t2)  # seq[n] = candidates[i]
-	lw $a0 0($fp)  # seq
-	lw $a1 4($fp)
+	lw $a0 8($sp)  # seq
+	lw $a1 12($sp)
 	addi $a1 $a1 1  # n + 1
-	lw $a2 8($fp)  # res
-	lw $a3 12($fp)  # length
+	lw $a2 16($sp)  # res
+	lw $a3 20($sp)  # length
 	jal permutations
+	sw $v1 16($sp)  # Update res
+	addi $s0 $s0 1  # Increment i 
+	j permForLoop
 	
 	permForComplete:
 	addi $sp $sp 4  # Reset stack pointer
 	
-	# Not sure about this one
 	lw $ra 0($sp)
 	li $v0 0
-	lw $v1 8($sp)  
-	addi $sp $sp 20
+	lw $s0 20($sp)
+	lw $s1 24($sp)
+	addi $sp $sp 28
 	jr $ra
 	# ========================
 	

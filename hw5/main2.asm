@@ -33,7 +33,7 @@ main:
 .data
 dst:   .space 2048
 perm1: .asciiz "ATGCCGTA"
-perm2: .asciiz "AT"
+perm2: .asciiz "ATATAT"
 
 # include student code
 .include "hw5.asm"
