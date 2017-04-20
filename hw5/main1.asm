@@ -92,6 +92,7 @@ main:
 
 .data
 dna: 	  .asciiz "ACGTTCAAGAGTACC"
+#ACGTTCAAGAGTACC
 pattern1: .asciiz "ACG"  	# Expect $v0: 0, $v1: irrelevant
 pattern2: .asciiz "*"		# Expect $v0: 1, $v1: 15
 pattern3: .asciiz "ACG*"	# Expect $v0: 1, $v1: 12

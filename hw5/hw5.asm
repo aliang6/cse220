@@ -21,160 +21,151 @@ toLowerCase:
 	jr $ra
 	
 
-# $a0 contains character array of sequence; $a0 contains character array of pattern
+# $a0 contains character array of sequence; $a1 contains character array of pattern
 # Return 1 if sequence matches pattern, 0 otherwise
 # Note: $a0 and $a1 are case insensitive
 match_glob:
 	addi $sp $sp -12
 	sw $ra 0($sp)
-	sw $s0 4($sp)
-	sw $s1 8($sp)
-	sw $s2 12($sp)
-	sw $s3 16($sp)
+	sw $a0 4($sp)
+	sw $a1 8($sp)
 	
-	# Copy arguments into s registers
-	move $s0 $a0 
-	move $s1 $a1
-	li $v0 0
+	# Base Cases
+			
+	# Wildcard is the only character left
+	lb $t0 1($a1)
+	bne $t0 0 baseCaseTwo
+	lb $t0 0($a1) 
+	bne $t0 42 baseCaseTwo
+	lw $ra 0($sp)
+	addi $sp $sp 12
+	li $v0 1
+	# Calculate remaining length of sequence
+	li $t1 0  # Counter
+	findRemSeqLength:
+    	add $t0 $a0 $t1  # Add counter to address
+    	lb $t0 0($t0)
+    	beqz $t0 remSeqLengthCalculated  # Null terminator found
+    	addi $t1 $t1 1
+    	j findRemSeqLength
+    remSeqLengthCalculated:
+    move $v1 $t1
+	jr $ra
+		
+	baseCaseTwo:  # Seq and pat are identical
+	li $t2 0  # Traversal counters
+	seqPatEqualityLoop:
+		add $t0 $a0 $t2
+		add $t1 $a1 $t2
+		lb $a2 0($t0)
+		# toLowerCase
+		jal toLowerCase
+		move $t0 $v0
+		lb $a2 0($t1)
+		jal toLowerCase
+		move $t1 $v0
+		add $t3 $t0 $t1
+		beq $t3 0 seqPatEqual  # Null terminator reached for both
+		# Equality check
+		bne $t0 $t1 baseCaseThree
+		addi $t2 $t2 1 # Increment counters
+		j seqPatEqualityLoop
+		
+	seqPatEqual:
+	lw $ra 0($sp)
+	addi $sp $sp 12
+	li $v0 1
 	li $v1 0
+	jr $ra
 	
+	baseCaseThree:
 	# Calculate length of sequence
-    li $s2 0  # Counter for finding string length
+    li $t1 0  # Counter for finding string length
     findStringLengthOne:
-    	add $t0 $a0 $s2  # Add counter to address
+    	add $t0 $a0 $t1  # Add counter to address
     	lb $t0 0($t0)
     	beqz $t0 stringLengthCalculatedOne  # Null terminator found
-    	addi $s2 $s2 1
+    	addi $t1 $t1 1
     	j findStringLengthOne
 	
 	stringLengthCalculatedOne:
 	# Calculate length of pattern
-	li $s3 0  # Counter for finding string length
+	li $t2 0  # Counter for finding string length
     findStringLengthTwo:
-    	add $t0 $a1 $s3  # Add counter to address
+    	add $t0 $a1 $t2  # Add counter to address
     	lb $t0 0($t0)
     	beqz $t0 stringLengthCalculatedTwo  # Null terminator found
-    	addi $s3 $s3 1
+    	addi $t2 $t2 1
     	j findStringLengthTwo
 	stringLengthCalculatedTwo:
 	
-	matchGlobLoop:
-		addi $sp $sp -12
-		sw $ra 0($sp)
-		sw $a0 4($sp)
-		sw $a1 8($sp)
-		# Base Cases
-		
-		# Wildcard is the only character left
-		lb $t0 1($a1)
-		bne $t0 0 baseCaseTwo
-		lb $t0 0($a1) 
-		bne $t0 42 baseCaseTwo
-		lw $ra 0($sp)
-		addi $sp $sp 12
-		li $v0 1
-		# Calculate remaining length of sequence
-		li $t1 0  # Counter
-		findRemSeqLength:
-    		add $t0 $a0 $t1  # Add counter to address
-    		lb $t0 0($t0)
-    		beqz $t0 remSeqLengthCalculated  # Null terminator found
-    		addi $t1 $t1 1
-    		j findRemSeqLength
-    	remSeqLengthCalculated:
-    	add $v1 $v1 $t1
-		jr $ra
-		
-		baseCaseTwo:
-		# Seq and pat are identical
-		bne $s2 $s3 baseCaseThree
-		li $t2 0  # Traversal counters
-		li $t3 0
-		seqPatEqualityLoop:
-			add $t0 $a0 $t2
-			add $t1 $a1 $t3
-			lb $a2 0($t0)
-			beq $a2 0 seqPatEqual  # Null terminator reached
-			# toLowerCase
-			jal toLowerCase
-			move $t0 $v0
-			lb $a2 0($t1)
-			jal toLowerCase
-			move $t1 $v0
-			# Equality check
-			bne $t0 $t1 baseCaseThree
-			addi $t2 $t2 1 # Increment counters
-			addi $t3 $t3 1
-			j seqPatEqualityLoop
-			
-		seqPatEqual:
-		lw $ra 0($sp)
-		addi $sp $sp 12
-		li $v0 1
-		jr $ra
-		
-		baseCaseThree:
-		xor $t0 $s2 $s3  # XOR of lengths
-		bnez $t0 matchGlobElse
-		li $v0 0
-		li $v1 0
-		lw $ra 0($sp)
-		addi $sp $sp 12
-		jr $ra
-		
-		
-	matchGlobElse:
-		lb $a2 0($a0)  # Load character of sequence
-		jal toLowerCase
-		move $t0 $v0
-		lb $a2 0($a1)  # Load character of pattern
-		jal toLowerCase
-		move $t1 $v0
-		
-		move $s0 $a0
-		move $s1 $a1 
-		
-		# Check for equality
-		bne $t0 $t1 seqPatNotEq
-		addi $a0 $a0 1  # Increment sequence address
-		addi $a1 $a1 1  # Increment pattern address 
-		jal matchGlobLoop
-		lw $ra 0($sp)
-		addi $sp $sp 12
-		jr $ra
-		
-		seqPatNotEq:
-		bne $t1 42 patNotWild
-		move $a0 $s0
-		move $a1 $s1
-		addi $a1 $a1 1 # Increment sequence address
-		jal matchGlobLoop
-		
-		bne $v0 1 noMatchFound
-		lw $ra 0($sp)
-		addi $sp $sp 12
-		jr $ra  # Return
-		noMatchFound:
-		move $a0 $s0
-		addi $a0 $a0 1
-		move $a1 $s1
-		jal matchGlobLoop
-		addi $v1 $v1 1  # Increment global length
-		lw $ra 0($sp)
-		addi $sp $sp 12
-		jr $ra
-		
-		patNotWild:
-		lw $ra 0($sp)
-		addi $sp $sp 12
-		li $v0 0
-		jr $ra
+	beqz $t1 xorCheckTwo
+	xorCheckOne:
+	bnez $t2 matchGlobElse
+	j xorCheckFailed
+	xorCheckTwo:
+	beqz $t2 matchGlobElse
 	
+	xorCheckFailed:
+	li $v0 0
+	li $v1 0
 	lw $ra 0($sp)
-	lw $s0 4($sp)
-	lw $s1 8($sp)
 	addi $sp $sp 12
 	jr $ra
+	
+matchGlobElse:
+	lb $a2 0($a0)  # Load character of sequence
+	jal toLowerCase
+	move $t0 $v0
+	lb $a2 0($a1)  # Load character of pattern
+	jal toLowerCase
+	move $t1 $v0
+	
+	# Preserve arguments
+	#move $s0 $a0
+	#move $s1 $a1 
+	
+	# Check for equality
+	bne $t0 $t1 seqPatNotEq
+	addi $a0 $a0 1  # Increment sequence address
+	addi $a1 $a1 1  # Increment pattern address 
+	jal match_glob
+	lw $ra 0($sp)
+	addi $sp $sp 12
+	jr $ra
+	
+	seqPatNotEq:
+	bne $t1 42 patNotWild
+	lw $a0 4($sp)
+	lw $a1 8($sp)
+	#move $a0 $s0
+	#move $a1 $s1 
+	addi $a1 $a1 1 # Increment sequence address
+	jal match_glob
+	
+	bne $v0 1 noMatchFound
+	lw $ra 0($sp)
+	addi $sp $sp 12
+	jr $ra  # Return
+	noMatchFound:
+	lw $a0 4($sp)
+	lw $a1 8($sp)
+	#move $a0 $s0
+	addi $a0 $a0 1
+	#move $a1 $s1
+	jal match_glob
+	addi $v1 $v1 1  # Increment global length
+	lw $ra 0($sp)
+	addi $sp $sp 12
+	jr $ra
+	
+	patNotWild:
+	lw $ra 0($sp)
+	addi $sp $sp 12
+	li $v0 0
+	li $v1 0
+	jr $ra
+	
 
 # $a0 is the destination address; $a1 is the sequence array
 save_perm:
