@@ -91,12 +91,12 @@ main:
 	syscall
 
 .data
-dna: 	  .asciiz "ACGTTCAAGAGTACC"
+dna: 	  .asciiz "acgttcaagagtacc"
 #ACGTTCAAGAGTACC
-pattern1: .asciiz "ACG"  	# Expect $v0: 0, $v1: irrelevant
-pattern2: .asciiz "*"		# Expect $v0: 1, $v1: 15
-pattern3: .asciiz "ACG*"	# Expect $v0: 1, $v1: 12
-pattern4: .asciiz "*ACC"	# Expect $v0: 1, $v1: 12
+pattern1: .asciiz "ACG*"  	# Expect $v0: 0, $v1: irrelevant
+pattern2: .asciiz "*tACc"		# Expect $v0: 1, $v1: 15
+pattern3: .asciiz "*GTA*"	# Expect $v0: 1, $v1: 12
+pattern4: .asciiz "*"	# Expect $v0: 1, $v1: 12
 pattern5: .asciiz "*AA*"	# Expect $v0: 1, $v1: 13
 
 # include student code

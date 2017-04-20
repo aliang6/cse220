@@ -253,23 +253,80 @@ construct_candidates:
 	
 # $a0 is the buffer character sequence of size length
 # $a1 is n; continue creating permutation on the nth character (seq[n-1])
-# $a2 is the pointer of the location to store the result when the premutation is complete (size == length)
+# $a2 is the pointer of the location to store the result when the permutation is complete (size == length)
 # $a3 is the length i.e. the total number of characters for each permutation
 permutations:
+	addi $sp $sp -20
+	sw $ra 0($sp)
+	sw $a0 4($sp)
+	sw $a1 8($sp)
+	sw $a2 12($sp)
+	sw $a3 16($sp)
+	
+	# Base checks
 	# Error checks
 	blez $a3 permutationError  # Length is less than or equal to zero
 	li $t0 2
 	div $a3 $t0
 	mfhi $t0
 	beq $t0 1 permutationError  # Length is odd
-	
-	# 
-
-	li $v0, -200
-	li $v1, -200
+	j permNoErrors
 	permutationError:
-	li $a0 -1
-	li $a1 0
+	lw $ra 0($sp)
+	addi $sp $sp 20
+	li $v0 -1
+	li $v1 0
 	jr $ra
+	
+	permNoErrors:
+	# A Permutation of the final length has been reached. Save it to res.
+	bne $a1 $a3 permutationsElse  # n = length
+	add $t0 $a0 $a3
+	addi $t0 $t0 1  # seq address + length + 1
+	sb $0 0($t0)  # Store null terminator
+	move $a1 $a0  # Sequence 
+	move $a0 $a2  # Res
+	jal save_perm
+	lw $ra 0($sp)
+	addi $sp $sp 20
+	move $v1 $v0  # Return next
+	li $v0 0  # Return 0 
+	jr $ra
+	
+	
+	permutationsElse:
+	move $fp $sp
+	addi $sp $sp -4  # Create space for candidates
+	move $a0 $fp  # candidates
+	lw $a1 0($fp)  # seq
+	lw $a2 4($fp)  # n
+	jal construct_candidates
+	move $t0 $v0  # ncand
+	li $t1 0   # i counter
+	bge $t1 $t0 permForComplete  # For loop complete
+	lw $t2 0($fp)  # Load sequence
+	lw $t3 4($fp)  # Load n 
+	add $t2 $t2 $t3  # seq[n]
+	lb $t3 0($sp)  # Load candidates
+	add $t3 $t3 $t1  # candidates[i]
+	sb $t3 0($t2)  # seq[n] = candidates[i]
+	lw $a0 0($fp)  # seq
+	lw $a1 4($fp)
+	addi $a1 $a1 1  # n + 1
+	lw $a2 8($fp)  # res
+	lw $a3 12($fp)  # length
+	jal permutations
+	
+	permForComplete:
+	addi $sp $sp 4  # Reset stack pointer
+	
+	# Not sure about this one
+	lw $ra 0($sp)
+	li $v0 0
+	lw $v1 8($sp)  
+	addi $sp $sp 20
+	jr $ra
+	# ========================
+	
 
 .data

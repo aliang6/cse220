@@ -21,10 +21,13 @@ main:
 	println
 	# permutations does not null terminate the final output
 	# $t1 is the address of the byte after last saved permutation
+	bnez $v0 notZero
 	sb $zero, 0($t1) 
 	print_strl(msg_output)
 	print_strl(res)
 	println
+	
+	notZero:
 	
 	# Sample Test 2
 	print_strl(msg_test2) 
@@ -45,10 +48,13 @@ main:
 	println
 	# permutations does not null terminate the final output
 	# $t1 is the address of the byte after last saved permutation
+	bnez $v0 notZeroTwo
 	sb $zero, 0($t1) 
 	print_strl(msg_output)
 	print_strl(res)
 	println
+	
+	notZeroTwo:
 	
 	# Sample Test 3
 	print_strl(msg_test3) 
@@ -69,10 +75,13 @@ main:
 	println
 	# permutations does not null terminate the final output
 	# $t1 is the address of the byte after last saved permutation
+	bnez $v0 notZeroThree
 	sb $zero, 0($t1) 
 	print_strl(msg_output)
 	print_strl(res)
 	println
+	
+	notZeroThree:
 	
 	# Sample Test 4
 	print_strl(msg_test4) 
@@ -93,9 +102,13 @@ main:
 	println
 	# permutations does not null terminate the final output
 	# $t1 is the address of the byte after last saved permutation
+	bnez $v0 notZeroFour
 	sb $zero, 0($t1) 
 	print_strl(msg_output)
 	print_strl(res)
+	println
+	
+	notZeroFour:
 	
 	# Terminate
 	li $v0, 10
