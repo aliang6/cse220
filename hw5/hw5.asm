@@ -286,7 +286,7 @@ permutations:
 	# A Permutation of the final length has been reached. Save it to res.
 	bne $a1 $a3 permutationsElse  # If n == length
 	add $t0 $a0 $a3
-	addi $t0 $t0 1  # seq address + length + 1
+	#addi $t0 $t0 1  # seq address + length + 1
 	sb $0 0($t0)  # Store null terminator
 	move $a1 $a0  # Sequence 
 	move $a0 $a2  # Res
