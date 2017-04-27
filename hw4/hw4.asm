@@ -720,7 +720,6 @@ validate_board:
 		j bitSevenLoop
 	
 	bitSevenDone:
-	
 	addi $sp $sp 16
 	addi $sp $sp 256
 	
@@ -734,7 +733,7 @@ validate_board:
 	lw $s3 16($sp)
 	lw $s4 20($sp)
 	lw $s5 24($sp)
-	addi $sp $sp -28
+	addi $sp $sp 28
     jr $ra
 
 ##############################
@@ -984,7 +983,7 @@ undo_piece:
 
 check_winner:
 	# Preserve return address and s registers
-	addi $sp $sp -36
+	addi $sp $sp -32
 	sw $ra 0($sp)
 	sw $s0 4($sp)
 	sw $s1 8($sp)
@@ -993,7 +992,6 @@ check_winner:
 	sw $s4 20($sp)
 	sw $s5 24($sp)
 	sw $s6 28($sp)
-	sw $s7 32($sp)
 	# Preserve arguments
 	move $s0 $a0  # Board array
 	move $s1 $a1  # num_rows
@@ -1153,8 +1151,7 @@ check_winner:
 	lw $s4 20($sp)
 	lw $s5 24($sp)
 	lw $s6 28($sp)
-	lw $s7 32($sp)
-	addi $sp $sp 36
+	addi $sp $sp 32
     jr $ra
 
 ##############################

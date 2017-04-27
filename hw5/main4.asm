@@ -56,36 +56,6 @@ main:
 	
 	notZeroTwo:
 	
-
-	
-	# Sample Test 4
-	print_strl(msg_test4) 
-	# Load arguments
-	la $a0, dna2
-	li $a1, 3
-	la $a2, res
-	li $a3, 6
-	# Function call
-	jal permutations
-	# Save return values
-	move $t0, $v0
-	move $t1, $v1
-	print_strl(msg_v0)
-	print_int($t0)
-	print_strl(msg_v1)
-	print_int($t1)
-	println
-	# permutations does not null terminate the final output
-	# $t1 is the address of the byte after last saved permutation
-	#bnez $v0 notZeroFour
-	sb $zero, 0($t1) 
-	print_strl(msg_output)
-	print_strl(res)
-	println
-	
-	notZeroFour:
-	
-	
 	# Sample Test 3
 	print_strl(msg_test3) 
 	# Load arguments
@@ -112,6 +82,34 @@ main:
 	println
 	
 	notZeroThree:
+	
+		
+	# Sample Test 4
+	print_strl(msg_test4) 
+	# Load arguments
+	la $a0, dna2
+	li $a1, 3
+	la $a2, res
+	li $a3, 6
+	# Function call
+	jal permutations
+	# Save return values
+	move $t0, $v0
+	move $t1, $v1
+	print_strl(msg_v0)
+	print_int($t0)
+	print_strl(msg_v1)
+	print_int($t1)
+	println
+	# permutations does not null terminate the final output
+	# $t1 is the address of the byte after last saved permutation
+	#bnez $v0 notZeroFour
+	sb $zero, 0($t1) 
+	print_strl(msg_output)
+	print_strl(res)
+	println
+	
+	notZeroFour:
 	
 	# Terminate
 	li $v0, 10
