@@ -17,10 +17,10 @@ Compilation of projects written in MIPS Assembly
 - Count Occurances of a Substring
 
 ## Homework 4 Functions
-- Create a Connect Four Board
-- Save for Board State to an External Document
-- Load Board State from an External Document
-- Validate Loaded Board State to Ensure Valid Game 
+- Create a Connect Four board
+- Save board state to an external document
+- Load board state from an external document
+- Validate loaded board state to ensure valid game 
     - Red pieces +/- 1 of yellow pieces
     - Turn number matches the pieces on the board
 - Display Board
@@ -33,4 +33,4 @@ Compilation of projects written in MIPS Assembly
   - Negative Diagonal Winner
 
 ## Homework 5 Functions 
-- Recursively search a DNA sequence for specific sequence patterns.
+- Recursively search a DNA sequence for specific sequence patterns
